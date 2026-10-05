@@ -12,6 +12,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+# The frontend webpack config lives in a folder named build/
+!frontend/config/build/
 develop-eggs/
 dist/
 downloads/
@@ -175,7 +177,3 @@ cython_debug/
 .pypirc
 
 *~
-
-frontend/src/shared/lib/
-frontend/src/widgets/Align/lib/
-frontend/src/widgets/Filters/lib/

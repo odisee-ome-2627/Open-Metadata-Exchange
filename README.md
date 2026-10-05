@@ -28,12 +28,15 @@ sequenceDiagram
 
 ## Run the components
 
-For local development and testing, start two INN2 servers, two FastAPI servers, and two React front ends with:
+For local development and testing, start an INN2 server, a FastAPI server, and the React front end with:
 
 ```bash
+cp config.json.example config.json  # The Docker builds need a config.json
 docker compose build
-docker compose up
-open http://localhost:5001
+docker compose up -d
+scripts/create_local_newsgroups.sh  # Create the plugin newsgroups on the local INN server
+open http://localhost:4000/imls/    # Front end
+open http://localhost:5001          # FastAPI server
 ```
 
 * [InterNetNews](https://github.com/InterNetNews/inn) (INN) backend that houses the metadata.
@@ -41,12 +44,16 @@ open http://localhost:5001
   * <https://www.eyrie.org/~eagle/software/inn/docs-2.7>
   * <https://github.com/cclauss/apt-get-inn2-docker>
 * [FastAPI](https://fastapi.tiangolo.com/)-Server middle tier that connects the INN to the frontend.
-* [FE2](./fe2/README.md) user interface that connects to the FastAPI-Server.
+* [Frontend](./frontend) user interface that connects to the FastAPI-Server.
 
-### FE2 NodeServer
+### Frontend dev server
+
+With `docker compose up -d` running, stop the `imls-react` container so port 4000 is free.
+The dev server forwards `/api` calls to the FastAPI server on <http://localhost:5001>.
 
 ```bash
-cd fe2
+docker compose stop imls-react
+cd frontend
 npm ci
 npm run start
 # Wait for `webpack x.y.z compiled successfully`
