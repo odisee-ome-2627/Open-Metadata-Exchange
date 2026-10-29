@@ -1,5 +1,6 @@
 import webpack from 'webpack';
 import path from 'path';
+import TerserPlugin from 'terser-webpack-plugin';
 import { BuildOptions } from './types/config';
 import { buildPlugins } from './buildPlugins';
 import { buildLoaders } from './buildLoaders';
@@ -17,6 +18,17 @@ export function buildWebpackConfig(options: BuildOptions): webpack.Configuration
             path: paths.build,
             clean: true,
             publicPath: isDev ? "/" : "/static/"
+        },
+        cache: {
+            type: 'filesystem',
+        },
+        optimization: {
+            minimize: !isDev,
+            minimizer: !isDev ? [
+                new TerserPlugin({
+                    parallel: 2,
+                }),
+            ] : [],
         },
         plugins: buildPlugins(options),
         module: {

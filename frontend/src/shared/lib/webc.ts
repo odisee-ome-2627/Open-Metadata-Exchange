@@ -1,48 +1,31 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import { createElement } from 'react';
+import { createRoot, Root } from 'react-dom/client';
 
-type PropsMapper<T> = (element: HTMLElement) => T;
+export default function defineWebComponent(name: string, ReactComponent: React.FC<any>, attrs: string[], props: (wc: HTMLElement) => any) {
+  class WebComponent extends HTMLElement {
+    private mountPoint: Element | ShadowRoot;
+    private root: Root;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function defineWebComponent<T = any>(
-  tagName: string,
-  Component: React.ComponentType<T>,
-  observedAttributes: string[],
-  propsMapper: PropsMapper<T>,
-): void {
-  class ReactWebComponent extends HTMLElement {
-    private mountPoint: HTMLElement | null = null;
-
-    static get observedAttributes() {
-      return observedAttributes;
+    constructor() {
+      super();
+      this.mountPoint = this;
+      this.root = createRoot(this.mountPoint as Element)
     }
 
+    static get observedAttributes() { return attrs; }
+
     connectedCallback() {
-      this.mountPoint = document.createElement('div');
-      this.appendChild(this.mountPoint);
-      this.render();
+      this.mount();
     }
 
     disconnectedCallback() {
-      if (this.mountPoint) {
-        ReactDOM.unmountComponentAtNode(this.mountPoint);
-      }
+      this.root.unmount();
     }
 
-    attributeChangedCallback() {
-      this.render();
-    }
-
-    render() {
-      if (!this.mountPoint) return;
-      const props = propsMapper(this);
-      ReactDOM.render(React.createElement(Component, props), this.mountPoint);
+    private mount() {
+      this.root.render(createElement(ReactComponent, props(this)));
     }
   }
 
-  if (!customElements.get(tagName)) {
-    customElements.define(tagName, ReactWebComponent);
-  }
+  customElements.define(name, WebComponent);
 }
-
-export default defineWebComponent;

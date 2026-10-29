@@ -1,9 +1,8 @@
-// Minimal stand-in: the original module was never committed upstream.
-export const StatusMessage = {
-  error(message: string) {
-    window.alert(message);
+export const StatusMessage = window['StatusMessage'] || {
+  success: (msg: string) => {
+    console.log('Success:', msg);
   },
-  success(message: string) {
-    window.alert(message);
-  },
+  error: (msg: string) => {
+    console.error(msg);
+  }
 };
