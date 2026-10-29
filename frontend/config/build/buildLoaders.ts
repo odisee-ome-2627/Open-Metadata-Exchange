@@ -8,7 +8,15 @@ export function buildLoaders({ isDev }: BuildOptions): webpack.RuleSetRule[] {
     use: ['@svgr/webpack'],
   };
 
-  const cssLoader = {
+  const plainCssLoader = {
+    test: /\.css$/i,
+    use: [
+      isDev ? 'style-loader' : MiniCssExtractPlugin.loader,
+      'css-loader',
+    ],
+  };
+
+  const sassLoader = {
     test: /\.s[ac]ss$/i,
     use: [
       isDev ? 'style-loader' : MiniCssExtractPlugin.loader,
@@ -27,18 +35,19 @@ export function buildLoaders({ isDev }: BuildOptions): webpack.RuleSetRule[] {
     ],
   };
 
-  const plainCssLoader = {
-    test: /\.css$/i,
-    use: [
-      isDev ? 'style-loader' : MiniCssExtractPlugin.loader,
-      'css-loader',
-    ],
-  };
-
   const typescriptLoader = {
     test: /\.tsx?$/,
-    use: 'ts-loader',
-    exclude: /node_modules/,
+    use: {
+      loader: 'ts-loader',
+      options: {
+        // Skips full program type-checking during the build - that checking's memory footprint was
+        // causing build:prod to OOM in CI. Type errors are now caught separately by `npm run typecheck`.
+        transpileOnly: true,
+      },
+    },
+    // `.d.ts` files match /\.tsx?$/ too. transpileOnly compiles files independently and can't emit
+    // for pure ambient declaration files, so they must be excluded from this loader.
+    exclude: [/node_modules/, /\.d\.ts$/],
   };
 
   const fileLoader = {
@@ -54,7 +63,7 @@ export function buildLoaders({ isDev }: BuildOptions): webpack.RuleSetRule[] {
     fileLoader,
     svgLoader,
     typescriptLoader,
-    cssLoader,
     plainCssLoader,
+    sassLoader,
   ];
 }

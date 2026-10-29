@@ -1,46 +1,75 @@
-import axios from 'axios';
+// @ts-nocheck
+import axios from 'axios'
 
-function buildFormData(data: Record<string, unknown>): FormData {
-  const formData = new FormData();
-  Object.entries(data).forEach(([key, value]) => {
-    if (value instanceof File || value instanceof Blob) {
-      formData.append(key, value);
-    } else {
-      formData.append(key, String(value));
+// temp csrf var & timer
+const csrf = () => new Promise((res) => axios.get('/api/csrf-token/').then(({ data }) => res(data.token)))
+
+export default {
+  post: (url, body, form = false) => new Promise(async (res, rej) => {
+    try {
+      const token = await csrf()
+      const headers = { 'X-Csrftoken': token, 'Content-Type': form ? 'multipart/form-data' : 'application/json;charset=UTF-8' }
+      if (form) {
+        const formData = new FormData()
+        for (const key in body) {
+          const value = body[key]
+          if (value !== undefined && value !== null)
+            formData.append(key, value)
+        }
+        body = formData
+      }
+      const { data } = await axios.post((url.startsWith('/') || url.startsWith('http')) ? url : ('/api/' + url), body, { headers })
+      res(data)
+    } catch (e) {
+      rej(e?.response?.data || e)
     }
-  });
-  return formData;
+  }),
+  put: (url, body, form = false) => new Promise(async (res, rej) => {
+    try {
+      const token = await csrf()
+      const headers = { 'X-Csrftoken': token, 'Content-Type': form ? 'multipart/form-data' : 'application/json;charset=UTF-8' }
+      if (form) {
+        const formData = new FormData()
+        for (const key in body) {
+          const value = body[key]
+          if (value !== undefined && value !== null)
+            formData.append(key, value)
+        }
+        body = formData
+      }
+      const { data } = await axios.put(url.startsWith('/api/') ? url : '/api/' + url, body, { headers })
+      res(data)
+    } catch (e) {
+      rej(e?.response?.data || e)
+    }
+  }),
+  patch: (url, body, form = false) => new Promise(async (res, rej) => {
+    try {
+      const token = await csrf()
+      const headers = { 'X-Csrftoken': token, 'Content-Type': form ? 'multipart/form-data' : 'application/json;charset=UTF-8' }
+      if (form) {
+        const formData = new FormData()
+        for (const key in body) {
+          const value = body[key]
+          if (value !== undefined)
+            formData.append(key, value)
+        }
+        body = formData
+      }
+      const { data } = await axios.patch(url.startsWith('/api/') ? url : '/api/' + url, body, { headers })
+      res(data)
+    } catch (e) {
+      rej(e?.response?.data || e)
+    }
+  }),
+  del: (url, body = {}) => new Promise(async (res, rej) => {
+    try {
+      const token = await csrf()
+      const headers = { 'X-Csrftoken': token }
+      const { data } = await axios.delete(url.startsWith('/api/') ? url : '/api/' + url, { data: body, headers })
+      res(data)
+    } catch (e) {
+      rej(e?.response?.data || e)
+    }
+  })
 }
-
-async function get(url: string, params?: Record<string, unknown>) {
-  const response = await axios.get(`/api/${url}`, { params });
-  return response.data;
-}
-
-async function post(url: string, data?: Record<string, unknown>, multipart = false) {
-  const payload = multipart ? buildFormData(data ?? {}) : data;
-  const headers = multipart ? { 'Content-Type': 'multipart/form-data' } : {};
-  const response = await axios.post(`/api/${url}`, payload, { headers });
-  return response.data;
-}
-
-async function put(url: string, data?: Record<string, unknown>) {
-  const response = await axios.put(`/api/${url}`, data);
-  return response.data;
-}
-
-async function patch(url: string, data?: Record<string, unknown>, multipart = false) {
-  const payload = multipart ? buildFormData(data ?? {}) : data;
-  const headers = multipart ? { 'Content-Type': 'multipart/form-data' } : {};
-  const response = await axios.patch(`/api/${url}`, payload, { headers });
-  return response.data;
-}
-
-async function del(url: string, data?: Record<string, unknown>) {
-  const response = await axios.delete(`/api/${url}`, { data });
-  return response.data;
-}
-
-const req = { get, post, put, patch, del, delete: del };
-
-export default req;
