@@ -1,27 +1,20 @@
-import { IFilterItem } from '../model/types.d';
+import { IFilterItem } from '../model/types'
 
-export function convertFlatToTree(items: IFilterItem[]): IFilterItem[] {
-  if (!items || items.length === 0) return [];
+export function convertFlatToTree(items: IFilterItem[], level=0): IFilterItem[] {
+  let itemsTree: IFilterItem[] = []
 
-  const roots: IFilterItem[] = [];
-  const stack: IFilterItem[] = [];
-
-  for (const item of items) {
-    const node: IFilterItem = { ...item, items: item.items ? [...item.items] : [] };
-
-    while (stack.length > 0 && stack[stack.length - 1].level >= node.level) {
-      stack.pop();
-    }
-
-    if (stack.length === 0) {
-      roots.push(node);
+  while (items.length > 0) {
+    const item = items[0]
+    if (item.level === level) {
+      items.shift()
+      if (item.items.length == 0) {
+        item.items = convertFlatToTree(items, level + 1)
+      }
+      itemsTree.push(item)
     } else {
-      const parent = stack[stack.length - 1];
-      parent.items.push(node);
+      break
     }
-
-    stack.push(node);
   }
 
-  return roots;
+  return itemsTree
 }

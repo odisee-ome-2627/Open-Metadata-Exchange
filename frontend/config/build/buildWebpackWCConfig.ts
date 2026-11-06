@@ -11,20 +11,21 @@ export function buildWebpackConfig(options: BuildOptions): webpack.Configuration
     mode,
     entry: paths.entry,
     output: {
-      filename: '[name].bundle.js',
+      filename: 'webc.js',
       path: paths.build,
       clean: true,
-      publicPath: isDev ? 'http://0.0.0.0:4000/' : '/static/',
+      publicPath: '/static/'
     },
     plugins: [
       new webpack.ProgressPlugin(),
       new MiniCssExtractPlugin({
-        filename: 'css/[name].[contenthash:8].css',
-        chunkFilename: 'css/[name].[contenthash:8].css',
+        filename: 'css/webc.css',
+        chunkFilename: 'css/webc.css',
       }),
       new webpack.DefinePlugin({
         __IS_DEV__: JSON.stringify(isDev),
       }),
+      new webpack.HotModuleReplacementPlugin(),
     ],
     module: {
       rules: buildLoaders(options),
