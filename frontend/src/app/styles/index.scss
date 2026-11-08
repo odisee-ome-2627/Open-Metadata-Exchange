@@ -28,6 +28,7 @@ body {
 .main-content {
   flex: 1 1 auto;
   min-width: 0;
+  margin: 0; // reset.scss gives every element a 4px margin
 
   // Focus is moved here by the skip link; no visible outline around the whole page.
   &:focus {
