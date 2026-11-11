@@ -2,7 +2,7 @@
 /* stylelint-disable font-family-name-quotes */
 @import "reset";
 @import "variables/global";
-@import url("https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&display=swap");
+@import "https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&display=swap";
 
 body {
   font-family: "ABeeZee", sans-serif;
@@ -54,6 +54,13 @@ body {
     outline: 3px solid #ffbf47;
     outline-offset: 2px;
   }
+}
+
+// The reCAPTCHA v3 script injects its badge (256x60, bottom right) into <body>.
+// Give it its fixed size and position up front so it never moves when fonts or styles load.
+.grecaptcha-badge {
+  position: fixed !important;
+  bottom: 14px;
 }
 
 .page-wrapper {

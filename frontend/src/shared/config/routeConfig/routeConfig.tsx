@@ -1,135 +1,141 @@
 // routeConfig.tsx
-import React from "react";
-import { Navigate, RouteObject } from "react-router-dom";
-import { NotFoundPage } from "pages/NotFoundPage";
+import React from 'react';
+import { Navigate, RouteObject } from 'react-router-dom';
+import IMLSThemeProvider from 'shared/theme/IMLSThemeProvider';
+import { lazyPage, LazyPage } from 'shared/lib/lazyPage';
 
-import { Home } from "pages/Home";
-import { Library } from "pages/Library";
-import { Explore } from "pages/Explore";
-import { SearchResources } from "pages/SearchResources";
-import { MicrositeCollections } from "pages/MicrositeCollections";
-import { SharedPreferences } from "widgets/SharedPreferences";
-import { SubscribedPreferences } from "widgets/SubscribedPreferences";
-import { SubscribedUpdates } from "widgets/SubscribedUpdates";
-import { SharedUpdates } from "widgets/SharedUpdates";
-import { Collections } from "pages/Collections";
-import { Collection } from "pages/Collection";
-import { Dashboard } from "pages/Dashboard";
-import { Reports } from "pages/Reports";
-import { Groups } from "pages/Groups";
-import { Organs } from "pages/Organs";
-import { Cases } from "pages/Cases";
-import { Group } from "pages/Group";
-import { Case } from "pages/Case";
-import { Lti } from "pages/Lti";
-import { My } from "pages/My";
-import { LibraryContent } from "../../../widgets/LibraryContent";
-import { MyAccount } from "../../../widgets/MyAccount";
-import { MyOrganizations } from "../../../widgets/MyOrganizations";
-import { MyItems } from "../../../widgets/MyItems";
-import { SharedContent } from "../../../widgets/SharedContent";
-import { SubscribedContent } from "../../../widgets/SubscribedContent";
-import { AdvancedSearch } from "../../../pages/AdvancedSearch";
-import { AdvancedSearchGlobal } from "../../../pages/AdvancedSearchGlobal";
-import { AllCollections } from "../../../pages/AllCollections";
-import { CollectionDetails } from "../../../pages/CollectionDetails/ui/CollectionDetails";
-import { Asset } from "../../../pages/Asset";
-import { WidgetDashboard } from "../../../widgets/WidgetDashboard";
-import GrapesEditorComponent from "widgets/WidgetDashboard/ui/GrapesJS";
-import { MySettings } from "widgets/MySettings";
-import { MyGroups } from "widgets/MyGroups";
-import { MyHubs } from "widgets/MyHubs";
-import { Ticket } from "pages/Ticket";
-import ArkLayout from "pages/Ark";
-import ArkHome from "pages/Ark/Home";
-import ArkAbout from "pages/Ark/About";
-import ArkSearch from "pages/Ark/Search";
-import ArkLesson from "pages/Ark/Lesson";
-import ArkCourse from "pages/Ark/Course";
-import ArkCollections from "pages/Ark/Browse";
-import ArkCollection from "pages/Ark/Collection";
-import IMLSThemeProvider from "shared/theme/IMLSThemeProvider";
+// Every page is lazy-loaded, so each route gets its own JS/CSS chunk and the main bundle
+// only contains the app shell. AppRouter already wraps each route in <Suspense>.
+const NotFoundPage = lazyPage(() => import('pages/NotFoundPage'), 'NotFoundPage');
+const Home = lazyPage(() => import('pages/Home'), 'Home');
+const Library = lazyPage(() => import('pages/Library'), 'Library');
+const Explore = lazyPage(() => import('pages/Explore'), 'Explore');
+const SearchResources = lazyPage(() => import('pages/SearchResources'), 'SearchResources');
+const MicrositeCollections = lazyPage(() => import('pages/MicrositeCollections'), 'MicrositeCollections');
+const SharedPreferences = lazyPage(() => import('widgets/SharedPreferences'), 'SharedPreferences');
+const SubscribedPreferences = lazyPage(() => import('widgets/SubscribedPreferences'), 'SubscribedPreferences');
+const SubscribedUpdates = lazyPage(() => import('widgets/SubscribedUpdates'), 'SubscribedUpdates');
+const SharedUpdates = lazyPage(() => import('widgets/SharedUpdates'), 'SharedUpdates');
+const Collections = lazyPage(() => import('pages/Collections'), 'Collections');
+const Collection = lazyPage(() => import('pages/Collection'), 'Collection');
+const Dashboard = lazyPage(() => import('pages/Dashboard'), 'Dashboard');
+const Reports = lazyPage(() => import('pages/Reports'), 'Reports');
+const Groups = lazyPage(() => import('pages/Groups'), 'Groups');
+const Organs = lazyPage(() => import('pages/Organs'), 'Organs');
+const Cases = lazyPage(() => import('pages/Cases'), 'Cases');
+const Group = lazyPage(() => import('pages/Group'), 'Group');
+const Case = lazyPage(() => import('pages/Case'), 'Case');
+const Lti = lazyPage(() => import('pages/Lti'), 'Lti');
+const My = lazyPage(() => import('pages/My'), 'My');
+const LibraryContent = lazyPage(() => import('widgets/LibraryContent'), 'LibraryContent');
+const MyAccount = lazyPage(() => import('widgets/MyAccount'), 'MyAccount');
+const MyOrganizations = lazyPage(() => import('widgets/MyOrganizations'), 'MyOrganizations');
+const MyItems = lazyPage(() => import('widgets/MyItems'), 'MyItems');
+const SharedContent = lazyPage(() => import('widgets/SharedContent'), 'SharedContent');
+const SubscribedContent = lazyPage(() => import('widgets/SubscribedContent'), 'SubscribedContent');
+const AdvancedSearch = lazyPage(() => import('pages/AdvancedSearch'), 'AdvancedSearch');
+const AdvancedSearchGlobal = lazyPage(() => import('pages/AdvancedSearchGlobal'), 'AdvancedSearchGlobal');
+const AllCollections = lazyPage(() => import('pages/AllCollections'), 'AllCollections');
+const CollectionDetails = lazyPage(() => import('pages/CollectionDetails/ui/CollectionDetails'), 'CollectionDetails');
+const Asset = lazyPage(() => import('pages/Asset'), 'Asset');
+const WidgetDashboard = lazyPage(() => import('widgets/WidgetDashboard'), 'WidgetDashboard');
+const GrapesEditorComponent = lazyPage(() => import('widgets/WidgetDashboard/ui/GrapesJS'));
+const MySettings = lazyPage(() => import('widgets/MySettings'), 'MySettings');
+const MyGroups = lazyPage(() => import('widgets/MyGroups'), 'MyGroups');
+const MyHubs = lazyPage(() => import('widgets/MyHubs'), 'MyHubs');
+const Ticket = lazyPage(() => import('pages/Ticket'), 'Ticket');
+const ArkLayout = lazyPage(() => import('pages/Ark'));
+const ArkHome = lazyPage(() => import('pages/Ark/Home'));
+const ArkAbout = lazyPage(() => import('pages/Ark/About'));
+const ArkSearch = lazyPage(() => import('pages/Ark/Search'));
+const ArkLesson = lazyPage(() => import('pages/Ark/Lesson'));
+const ArkCourse = lazyPage(() => import('pages/Ark/Course'));
+const ArkCollections = lazyPage(() => import('pages/Ark/Browse'));
+const ArkCollection = lazyPage(() => import('pages/Ark/Collection'));
+
+// IMLSThemeProvider only renders its children after the theme request is done. Preloading the
+// page here downloads its chunk at the same time, instead of only after the theme has loaded.
+function ThemedPage({ page: Page }: { page: LazyPage }) {
+  Page.preload();
+  return (
+    <IMLSThemeProvider>
+      <Page />
+    </IMLSThemeProvider>
+  );
+}
 
 export enum AppRoutes {
-  HOME = "home",
-  EXPLORE = "explore",
-  LIBRARY = "library",
-  SEARCH = "search",
-  ADVANCED = "advanced",
-  ADVANCED_SEARCH = "advanced_search",
-  BROWSE = "browse",
-  DETAILS = "details",
-  MICROSITE = "microsite",
-  ASSET = "asset",
-  NOT_FOUND = "not_found",
-  COLLECTIONS = "collections",
-  COLLECTION = "collection",
-  RESOUORCES = "resources",
-  DASHBOARD = "dashboard",
-  TICKET = "ticket",
-  REPORTS = "reports",
-  GROUPS = "groups",
-  ORGANS = "organs",
-  CASES = "cases",
-  GROUP = "group",
-  CASE = "case",
-  CASE_LEGACY = "case_legacy",
-  LTI = "lti",
-  MY = "my",
-  WIDGET_DASHBOARD = "widget_dashboard",
-  WIDGET_GRAPES = "widget_grapes",
-  WIDGET_GRAPES_EDIT = "widget_grapes_edit",
-  ARK = "ark",
+  HOME = 'home',
+  EXPLORE = 'explore',
+  LIBRARY = 'library',
+  SEARCH = 'search',
+  ADVANCED = 'advanced',
+  ADVANCED_SEARCH = 'advanced_search',
+  BROWSE = 'browse',
+  DETAILS = 'details',
+  MICROSITE = 'microsite',
+  ASSET = 'asset',
+  NOT_FOUND = 'not_found',
+  COLLECTIONS = 'collections',
+  COLLECTION = 'collection',
+  RESOUORCES = 'resources',
+  DASHBOARD = 'dashboard',
+  TICKET = 'ticket',
+  REPORTS = 'reports',
+  GROUPS = 'groups',
+  ORGANS = 'organs',
+  CASES = 'cases',
+  GROUP = 'group',
+  CASE = 'case',
+  CASE_LEGACY = 'case_legacy',
+  LTI = 'lti',
+  MY = 'my',
+  WIDGET_DASHBOARD = 'widget_dashboard',
+  WIDGET_GRAPES = 'widget_grapes',
+  WIDGET_GRAPES_EDIT = 'widget_grapes_edit',
+  ARK = 'ark',
 }
 
 export const RoutePath: Record<AppRoutes, string> = {
-  [AppRoutes.HOME]: "/imls",
-  [AppRoutes.EXPLORE]: "/imls/explore-oer-exchange",
-  [AppRoutes.LIBRARY]: "/imls/site-collections/*",
-  [AppRoutes.SEARCH]: "/imls/search",
-  [AppRoutes.ADVANCED]: "/imls/advanced-resource-search",
-  [AppRoutes.ADVANCED_SEARCH]: "/react/advanced-search",
-  [AppRoutes.BROWSE]: "/imls/browse",
-  [AppRoutes.DETAILS]: "/imls/collection-details/:name/:id/resources",
-  [AppRoutes.MICROSITE]: "/imls/microsite/:name",
-  [AppRoutes.ASSET]: "/imls/asset/*",
-  [AppRoutes.COLLECTIONS]: "/curated-collections/new",
-  [AppRoutes.COLLECTION]: "/curated-collections/new/:id",
-  [AppRoutes.RESOUORCES]: "/react/resources",
-  [AppRoutes.GROUPS]: "/groups/new",
-  [AppRoutes.ORGANS]: "/organization/new",
-  [AppRoutes.DASHBOARD]: "/reports/dashboard/*",
-  [AppRoutes.TICKET]: "/react/ticket",
-  [AppRoutes.REPORTS]: "/reports/new",
-  [AppRoutes.CASES]: "/courseware/new",
-  [AppRoutes.GROUP]: "/groups/new/:id",
-  [AppRoutes.CASE]: "/courseware/new/:id",
-  [AppRoutes.CASE_LEGACY]: "/cases/:id",
-  [AppRoutes.LTI]: "/lti/v1.3/picker/:id/resources",
-  [AppRoutes.MY]: "/my/new",
-  [AppRoutes.WIDGET_DASHBOARD]: "/new/my/page/dashboard",
-  [AppRoutes.WIDGET_GRAPES]: "/new/my/page/grapes/new",
-  [AppRoutes.WIDGET_GRAPES_EDIT]: "/new/my/page/grapes/:id",
-  [AppRoutes.ARK]: "/ark",
-  [AppRoutes.NOT_FOUND]: "*",
+  [AppRoutes.HOME]: '/imls',
+  [AppRoutes.EXPLORE]: '/imls/explore-oer-exchange',
+  [AppRoutes.LIBRARY]: '/imls/site-collections/*',
+  [AppRoutes.SEARCH]: '/imls/search',
+  [AppRoutes.ADVANCED]: '/imls/advanced-resource-search',
+  [AppRoutes.ADVANCED_SEARCH]: '/react/advanced-search',
+  [AppRoutes.BROWSE]: '/imls/browse',
+  [AppRoutes.DETAILS]: '/imls/collection-details/:name/:id/resources',
+  [AppRoutes.MICROSITE]: '/imls/microsite/:name',
+  [AppRoutes.ASSET]: '/imls/asset/*',
+  [AppRoutes.COLLECTIONS]: '/curated-collections/new',
+  [AppRoutes.COLLECTION]: '/curated-collections/new/:id',
+  [AppRoutes.RESOUORCES]: '/react/resources',
+  [AppRoutes.GROUPS]: '/groups/new',
+  [AppRoutes.ORGANS]: '/organization/new',
+  [AppRoutes.DASHBOARD]: '/reports/dashboard/*',
+  [AppRoutes.TICKET]: '/react/ticket',
+  [AppRoutes.REPORTS]: '/reports/new',
+  [AppRoutes.CASES]: '/courseware/new',
+  [AppRoutes.GROUP]: '/groups/new/:id',
+  [AppRoutes.CASE]: '/courseware/new/:id',
+  [AppRoutes.CASE_LEGACY]: '/cases/:id',
+  [AppRoutes.LTI]: '/lti/v1.3/picker/:id/resources',
+  [AppRoutes.MY]: '/my/new',
+  [AppRoutes.WIDGET_DASHBOARD]: '/new/my/page/dashboard',
+  [AppRoutes.WIDGET_GRAPES]: '/new/my/page/grapes/new',
+  [AppRoutes.WIDGET_GRAPES_EDIT]: '/new/my/page/grapes/:id',
+  [AppRoutes.ARK]: '/ark',
+  [AppRoutes.NOT_FOUND]: '*',
 };
 
 export const routeConfig: Record<AppRoutes, RouteObject> = {
   [AppRoutes.HOME]: {
     path: RoutePath.home,
-    element: (
-      <IMLSThemeProvider>
-        <Home />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={Home} />,
   },
   [AppRoutes.EXPLORE]: {
     path: RoutePath.explore,
-    element: (
-      <IMLSThemeProvider>
-        <Explore />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={Explore} />,
   },
   // [AppRoutes.MY_ACCOUNT]: {
   //   path: RoutePath.my_account,
@@ -149,11 +155,7 @@ export const routeConfig: Record<AppRoutes, RouteObject> = {
   },
   [AppRoutes.LIBRARY]: {
     path: RoutePath.library,
-    element: (
-      <IMLSThemeProvider>
-        <Library />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={Library} />,
     children: [
       {
         index: true,
@@ -165,50 +167,42 @@ export const routeConfig: Record<AppRoutes, RouteObject> = {
         ),
       },
       {
-        path: "main",
+        path: 'main',
         element: <LibraryContent />,
       },
       {
-        path: "subscribed-collections",
+        path: 'subscribed-collections',
         element: <SubscribedContent />,
       },
       {
-        path: "shared-collections",
+        path: 'shared-collections',
         element: <SharedContent />,
       },
       {
-        path: "shared-preferences",
+        path: 'shared-preferences',
         element: <SharedPreferences />,
       },
       {
-        path: "subscribed-preferences",
+        path: 'subscribed-preferences',
         element: <SubscribedPreferences />,
       },
       {
-        path: "subscribed-updates",
+        path: 'subscribed-updates',
         element: <SubscribedUpdates />,
       },
       {
-        path: "shared-updates",
+        path: 'shared-updates',
         element: <SharedUpdates />,
       },
     ],
   },
   [AppRoutes.SEARCH]: {
     path: RoutePath.search,
-    element: (
-      <IMLSThemeProvider>
-        <SearchResources />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={SearchResources} />,
   },
   [AppRoutes.ADVANCED]: {
     path: RoutePath.advanced,
-    element: (
-      <IMLSThemeProvider>
-        <AdvancedSearch />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={AdvancedSearch} />,
   },
   [AppRoutes.ADVANCED_SEARCH]: {
     path: RoutePath.advanced_search,
@@ -216,35 +210,19 @@ export const routeConfig: Record<AppRoutes, RouteObject> = {
   },
   [AppRoutes.BROWSE]: {
     path: RoutePath.browse,
-    element: (
-      <IMLSThemeProvider>
-        <AllCollections />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={AllCollections} />,
   },
   [AppRoutes.DETAILS]: {
     path: RoutePath.details,
-    element: (
-      <IMLSThemeProvider>
-        <CollectionDetails />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={CollectionDetails} />,
   },
   [AppRoutes.MICROSITE]: {
     path: RoutePath.microsite,
-    element: (
-      <IMLSThemeProvider>
-        <MicrositeCollections />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={MicrositeCollections} />,
   },
   [AppRoutes.ASSET]: {
     path: RoutePath.asset,
-    element: (
-      <IMLSThemeProvider>
-        <Asset />
-      </IMLSThemeProvider>
-    ),
+    element: <ThemedPage page={Asset} />,
   },
   [AppRoutes.COLLECTIONS]: {
     path: RoutePath.collections,
@@ -307,27 +285,27 @@ export const routeConfig: Record<AppRoutes, RouteObject> = {
         element: <Navigate to="/my/new/items" replace />,
       },
       {
-        path: "items",
+        path: 'items',
         element: <MyItems />,
       },
       {
-        path: "groups",
+        path: 'groups',
         element: <MyGroups />,
       },
       {
-        path: "hubs",
+        path: 'hubs',
         element: <MyHubs />,
       },
       {
-        path: "account",
+        path: 'account',
         element: <MyAccount />,
         children: [
           {
-            path: "settings",
+            path: 'settings',
             element: <MySettings />,
           },
           {
-            path: "organization",
+            path: 'organization',
             element: <MyOrganizations />,
           },
         ],
@@ -339,13 +317,13 @@ export const routeConfig: Record<AppRoutes, RouteObject> = {
     element: <ArkLayout />,
     children: [
       { index: true, element: <ArkHome /> },
-      { path: "about", element: <ArkAbout /> },
-      { path: "search", element: <ArkSearch /> },
-      { path: "lesson/*", element: <ArkLesson /> },
-      { path: "course/:id", element: <ArkCourse /> },
+      { path: 'about', element: <ArkAbout /> },
+      { path: 'search', element: <ArkSearch /> },
+      { path: 'lesson/*', element: <ArkLesson /> },
+      { path: 'course/:id', element: <ArkCourse /> },
       // { path: 'overview/*', element: <ArkOverview /> },
-      { path: "browse", element: <ArkCollections /> },
-      { path: "collection/*", element: <ArkCollection /> },
+      { path: 'browse', element: <ArkCollections /> },
+      { path: 'collection/*', element: <ArkCollection /> },
     ],
   },
   [AppRoutes.NOT_FOUND]: {
