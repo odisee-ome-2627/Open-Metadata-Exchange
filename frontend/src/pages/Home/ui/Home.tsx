@@ -121,58 +121,17 @@ export function Home({ className }: HomeProps) {
   //   return () => document.head.removeChild(styleTag);
   // }, [])
 
-  return <div className={classNames(cls.Home, {}, [className])}>
-    <Box component="form" role="search" onSubmit={onSearch} sx={sxStyles.searchBar} className={cls.searchBar}>
-      <TextField
-        value={inputValue}
-        onChange={({ target }) => setInputValue(target.value)}
-        variant="outlined"
-        placeholder="Search Collections"
-        inputProps={{ 'aria-label': 'Search collections' }}
-        sx={sxStyles.searchInput}
-        size="small"
-      />
-      <Button type="submit" variant="contained" sx={sxStyles.searchButton}>
-        Search
-      </Button>
-    </Box>
-    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }} className={cls.dropdowns}>
-      <Select label="Collection publisher" value={selectedTenants} options={tenants} onChange={setSelectedTenants} />
-      <Select label="Subject area" value={selectedSubjects} options={subjects} onChange={setSelectedSubjects} />
-      <Select label="Educational level" value={selectedLevels} options={levels} onChange={setSelectedLevels} />
-      {/* <DateRangePicker onChange={setDate} value={date} /> */}
-    </Box>
-
-    <Typography variant="h2" sx={sxStyles.sectionTitle}>
-      What's new in the OER Exchange
-    </Typography>
-    <Typography variant="h6" sx={sxStyles.sectionSubtitle}>
-      Add collections and resources to your microsite from nationwide digital libraries sharing on the OER Exchange.
-    </Typography>
-    {data && <Grid container spacing={4} justifyContent="center">
-      {data.map((item) => <Grid item xs={12} sm={6} md={4}>
-        <CollectionCard item={item} />
-      </Grid>)}
-    </Grid>}
-    <Box display="flex" justifyContent="center">
-      <Button variant="outlined" sx={sxStyles.viewAllButton} onClick={() => navigate('/imls/browse')}>
-        View all the collections in OER Exchange
-      </Button>
-    </Box>
-    <Typography variant="h2" sx={sxStyles.sectionTitle} style={{ marginTop: '64px' }}>
-      Learn About The OER Exchange
-    </Typography>
-    <Grid container spacing={4}>
-      <Grid item xs={12} sm={6} md={3}>
-        <FeatureCard
-          title="Share"
-          text="Share your institution's OER content with other libraries."
-          icon={<ShareIcon />}
-          links={[{
-            label: 'Manage shared OER',
-            href: '/imls/site-collections/shared-collections',
-            icon: <ManageIcon />
-          }]}
+  return (
+    <div className={classNames(cls.Home, {}, [className])}>
+      <Box component="form" role="search" onSubmit={onSearch} sx={sxStyles.searchBar} className={cls.searchBar}>
+        <TextField
+          value={inputValue}
+          onChange={({ target }) => setInputValue(target.value)}
+          variant="outlined"
+          placeholder="Search Collections"
+          inputProps={{ 'aria-label': 'Search collections' }}
+          sx={sxStyles.searchInput}
+          size="small"
         />
         <Button type="submit" variant="contained" sx={sxStyles.searchButton}>
           Search

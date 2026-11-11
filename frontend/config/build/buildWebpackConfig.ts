@@ -17,32 +17,32 @@ export function buildWebpackConfig(options: BuildOptions): webpack.Configuration
   const htmlPublicPath = isDev ? undefined : '/static/';
 
   return {
-        mode,
-        entry: paths.entry,
-        output: {
-            filename: '[name].[contenthash].js',
-            chunkFilename: '[name].[contenthash].js',
-            path: paths.build,
-            clean: true,
-            publicPath: isDev ? 'http://0.0.0.0:4000/' : 'auto',
-        },
-        cache: {
-            type: 'filesystem',
-        },
-        optimization: {
-            minimize: !isDev,
-            minimizer: !isDev ? [
-                new TerserPlugin({
-                    parallel: 2,
-                }),
-            ] : [],
-        },
-        plugins: buildPlugins({ ...options, htmlPublicPath }),
-        module: {
-            rules: buildLoaders(options),
-        },
-        resolve: buildResolvers(options),
-        devtool: isDev ? 'inline-source-map' : undefined,
-        devServer: isDev ? buildDevServer(options) : undefined,
-    };
+    mode,
+    entry: paths.entry,
+    output: {
+      filename: '[name].[contenthash].js',
+      chunkFilename: '[name].[contenthash].js',
+      path: paths.build,
+      clean: true,
+      publicPath: isDev ? 'http://0.0.0.0:4000/' : 'auto',
+    },
+    cache: {
+      type: 'filesystem',
+    },
+    optimization: {
+      minimize: !isDev,
+      minimizer: !isDev ? [
+        new TerserPlugin({
+          parallel: 2,
+        }),
+      ] : [],
+    },
+    plugins: buildPlugins({ ...options, htmlPublicPath }),
+    module: {
+      rules: buildLoaders(options),
+    },
+    resolve: buildResolvers(options),
+    devtool: isDev ? 'inline-source-map' : undefined,
+    devServer: isDev ? buildDevServer(options) : undefined,
+  };
 }
