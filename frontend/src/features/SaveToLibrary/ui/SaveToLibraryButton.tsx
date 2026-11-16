@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { saveToLibrary, SaveResult } from '../api/saveToLibrary';
@@ -72,7 +71,6 @@ export function SaveToLibraryButton({
         aria-disabled={!clickable}
         aria-label={name ? `${LABELS[state]}: ${name}` : undefined}
         onClick={handleClick}
-        startIcon={state === 'saving' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
         sx={clickable ? undefined : { cursor: 'default' }}
       >
         {LABELS[state]}
