@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { memo } from 'react';
 import { Box, Card, CardActionArea, CardMedia, Typography } from '@mui/material';
+import { SaveToLibraryButton } from 'features/SaveToLibrary';
 
 export const CollectionItemCard = memo(({ collection, className, isNew = false }) => {
   const level: string[] = [];
@@ -76,6 +77,8 @@ export const CollectionItemCard = memo(({ collection, className, isNew = false }
           minWidth: 225,
           maxWidth: 340,
           height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
           transition: 'box-shadow 0.2s',
           '&:hover': {
             boxShadow: 6,
@@ -87,7 +90,7 @@ export const CollectionItemCard = memo(({ collection, className, isNew = false }
           component={Link}
           to={`/imls/collection-details/${collection.micrositeSlug || collection.microsite || ''}/${collection.id}/resources`}
           aria-label="Go to Collection page"
-          sx={{ display: 'block', textAlign: 'left', height: '100%' }}
+          sx={{ display: 'block', textAlign: 'left', flex: 1 }}
         >
           <CardMedia
             component="img"
@@ -151,6 +154,15 @@ export const CollectionItemCard = memo(({ collection, className, isNew = false }
             </Typography>
           </Box>
         </CardActionArea>
+        {/* Outside the link above: a button inside a link cannot be reached by keyboard. */}
+        <Box sx={{ px: 2, pb: 2 }}>
+          <SaveToLibraryButton
+            micrositeSlug={collection.micrositeSlug || collection.microsite || ''}
+            id={collection.id}
+            name={collection.name}
+            size="small"
+          />
+        </Box>
       </Card>
     </Box>
   );
