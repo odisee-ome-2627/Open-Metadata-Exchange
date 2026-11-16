@@ -41,9 +41,9 @@ const ERROR_STATES: State[] = ['unsupported', 'notFound', 'failed'];
 // Only these states do something on click. The others keep the button focusable but inert.
 const CLICKABLE_STATES: State[] = ['ready', 'failed'];
 
-export const SaveToLibraryButton = ({
+export function SaveToLibraryButton({
   micrositeSlug, id, name, size = 'medium',
-}: SaveToLibraryButtonProps) => {
+}: SaveToLibraryButtonProps) {
   const [state, setState] = useState<State>('ready');
   const [cmsUrl, setCmsUrl] = useState<string>();
 
@@ -98,4 +98,4 @@ export const SaveToLibraryButton = ({
       )}
     </Box>
   );
-};
+}
