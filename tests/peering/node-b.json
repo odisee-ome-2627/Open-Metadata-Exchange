@@ -4,7 +4,7 @@
     "peers": [
 	{
 	    "name": "node-a",
-	    "dns_name": "node-a",
+	    "dns_name": "node-x",
 	    "port": 119,
 	    "incoming_ip": "172.30.0.11"
 	}
