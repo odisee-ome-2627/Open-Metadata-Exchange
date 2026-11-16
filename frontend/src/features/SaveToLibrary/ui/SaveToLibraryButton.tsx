@@ -71,7 +71,11 @@ export function SaveToLibraryButton({
         aria-disabled={!clickable}
         aria-label={name ? `${LABELS[state]}: ${name}` : undefined}
         onClick={handleClick}
-        sx={clickable ? undefined : { cursor: 'default' }}
+        sx={{
+          cursor: clickable ? 'pointer' : 'default',
+          // The grey pulse MUI shows on focus is hard to see, so keyboard users get an outline.
+          '&:focus-visible': { outline: '2px solid', outlineColor: 'text.primary', outlineOffset: '2px' },
+        }}
       >
         {LABELS[state]}
       </Button>
