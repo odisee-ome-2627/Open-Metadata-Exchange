@@ -52,6 +52,33 @@ describe('SaveToLibraryButton', () => {
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
+  test('sends the id as a number and escapes the channel name, as on the detail page', async () => {
+    mockedAxios.post.mockResolvedValue({ data: responses.saved.body });
+    render(<SaveToLibraryButton micrositeSlug="ome/eric" id="42" />);
+
+    save();
+
+    await waitFor(() => expect(button().textContent).toBe('Saved'));
+    expect(mockedAxios.post).toHaveBeenCalledWith('/api/channel/ome%2Feric/save', { id: 42 });
+  });
+
+  test('without a card name the visible text is the name of the button', () => {
+    render(<SaveToLibraryButton micrositeSlug="ome.eric" id={42} />);
+
+    expect(button().hasAttribute('aria-label')).toBe(false);
+    expect(screen.getByRole('button', { name: 'Save to my library' })).toBe(button());
+  });
+
+  test('saved without a `cms_url` in the answer: no link', async () => {
+    mockedAxios.post.mockResolvedValue({ data: { status: 'saved', cms_id: '148252' } });
+    renderButton();
+
+    save();
+
+    await waitFor(() => expect(status().textContent).toBe('Saved to your library.'));
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
   test('saving: announces it and ignores further clicks until the answer is in', async () => {
     let answer: () => void;
     mockedAxios.post.mockReturnValue(new Promise((resolve) => {
@@ -127,7 +154,9 @@ describe('SaveToLibraryButton', () => {
 
     await waitFor(() => expect(status().textContent)
       .toBe('This card no longer exists, so it cannot be saved.'));
+    expect(button().textContent).toBe('Cannot be saved');
     expect(button().getAttribute('aria-disabled')).toBe('true');
+    expect(screen.queryByRole('link')).toBeNull();
 
     save();
     expect(mockedAxios.post).toHaveBeenCalledTimes(1);
