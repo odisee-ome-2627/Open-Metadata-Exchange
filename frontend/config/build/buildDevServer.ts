@@ -9,6 +9,20 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 // still comes from FastAPI.
 const SAVE_API_URL = process.env.REACT_APP_SAVE_API_URL;
 
+// First match wins, so the save rule has to come before the general `/api/` rule.
+const PROXY = [
+  ...(SAVE_API_URL ? [{
+    context: ['/api/channel/*/save'],
+    target: SAVE_API_URL,
+    changeOrigin: true,
+  }] : []),
+  {
+    context: ['/api/'],
+    target: API_URL,
+    changeOrigin: true,
+  },
+];
+
 export function buildDevServer(options: BuildOptions): DevServerConfiguration {
     return {
         port: options.port,
@@ -16,18 +30,6 @@ export function buildDevServer(options: BuildOptions): DevServerConfiguration {
         historyApiFallback: true,
         hot: true,
         allowedHosts: "all",
-        proxy: [
-            // First match wins, so this one has to come before the general `/api/` rule.
-            ...(SAVE_API_URL ? [{
-                context: ['/api/channel/*/save'],
-                target: SAVE_API_URL,
-                changeOrigin: true,
-            }] : []),
-            {
-                context: ['/api/'],
-                target: API_URL,
-                changeOrigin: true,
-            },
-        ],
+        proxy: PROXY,
     };
 }
