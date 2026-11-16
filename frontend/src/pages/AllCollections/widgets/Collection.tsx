@@ -5,6 +5,8 @@ import { Box, Card, CardActionArea, CardMedia, Typography } from '@mui/material'
 import { SaveToLibraryButton } from 'features/SaveToLibrary';
 
 export const CollectionItemCard = memo(({ collection, className, isNew = false }) => {
+  const { id, name } = collection;
+  const slug = collection.micrositeSlug || collection.microsite || '';
   const level: string[] = [];
   let { educationLevels } = collection;
   if (educationLevels && educationLevels.length) {
@@ -88,14 +90,14 @@ export const CollectionItemCard = memo(({ collection, className, isNew = false }
       >
         <CardActionArea
           component={Link}
-          to={`/imls/collection-details/${collection.micrositeSlug || collection.microsite || ''}/${collection.id}/resources`}
+          to={`/imls/collection-details/${slug}/${id}/resources`}
           aria-label="Go to Collection page"
           sx={{ display: 'block', textAlign: 'left', flex: 1 }}
         >
           <CardMedia
             component="img"
             image={collection.thumbnail}
-            alt={collection.name}
+            alt={name}
             sx={{
               width: '100%',
               height: 150,
@@ -117,7 +119,7 @@ export const CollectionItemCard = memo(({ collection, className, isNew = false }
               }}
               className="item_name"
             >
-              {collection.name}
+              {name}
             </Typography>
             <Typography
               variant="subtitle2"
@@ -157,9 +159,9 @@ export const CollectionItemCard = memo(({ collection, className, isNew = false }
         {/* Outside the link above: a button inside a link cannot be reached by keyboard. */}
         <Box sx={{ px: 2, pb: 2 }}>
           <SaveToLibraryButton
-            micrositeSlug={collection.micrositeSlug || collection.microsite || ''}
-            id={collection.id}
-            name={collection.name}
+            micrositeSlug={slug}
+            id={id}
+            name={name}
             size="small"
           />
         </Box>
