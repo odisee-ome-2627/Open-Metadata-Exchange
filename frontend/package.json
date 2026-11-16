@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --env port=4000",
-    "start:dev:server": "npx json-server --watch db.json",
+    "start:dev:server": "npx json-server --watch db.json --middlewares ./config/mock/saveToLibrary.js",
     "build:prod": "NODE_OPTIONS=--max-old-space-size=4096 webpack --env mode=production",
     "build:prod-ark": "NODE_OPTIONS=--max-old-space-size=4096 webpack --config webpack.ark.config.ts --env mode=production",
     "build:dev": "webpack --env mode=development",
