@@ -53,8 +53,10 @@ describe('SaveToLibraryButton', () => {
   });
 
   test('saving: announces it and ignores further clicks until the answer is in', async () => {
-    let answer: (value: unknown) => void;
-    mockedAxios.post.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    let answer: () => void;
+    mockedAxios.post.mockReturnValue(new Promise((resolve) => {
+      answer = () => resolve({ data: responses.saved.body });
+    }));
     renderButton();
 
     save();
@@ -67,7 +69,7 @@ describe('SaveToLibraryButton', () => {
     save();
     expect(mockedAxios.post).toHaveBeenCalledTimes(1);
 
-    await act(async () => answer({ data: responses.saved.body }));
+    await act(async () => answer());
     expect(button().textContent).toBe('Saved');
   });
 
