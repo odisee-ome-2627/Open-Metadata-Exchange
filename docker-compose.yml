@@ -49,9 +49,121 @@ services:
     depends_on:
       - fastapi-server
 
+  dspace-db:
+    profiles: ["dev"]
+    image: postgres:15
+    environment:
+      PGDATA: /pgdata
+      POSTGRES_DB: dspace
+      POSTGRES_USER: dspace
+      POSTGRES_PASSWORD: ${DSPACE_DB_PASSWORD:-dspace}
+    networks:
+      - my_network
+    volumes:
+      - dspace_pgdata:/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dspace -d dspace"]
+      interval: 5s
+      retries: 20
+
+  dspace-solr:
+    profiles: ["dev"]
+    image: dspace/dspace-solr:${DSPACE_VER:-dspace-10.1}
+    user: root
+    working_dir: /var/solr/data
+    networks:
+      - my_network
+    volumes:
+      - dspace_solr_data:/var/solr/data
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        init-var-solr
+        for core in authority oai search statistics qaevent suggestion audit; do
+          precreate-core $$core /opt/solr/server/solr/configsets/$$core
+          cp -r /opt/solr/server/solr/configsets/$$core/* $$core
+        done
+        chown -R solr:solr /var/solr
+        runuser -u solr -- solr-foreground
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8983/solr/search/admin/ping > /dev/null"]
+      interval: 10s
+      retries: 20
+      start_period: 20s
+
+  dspace:
+    profiles: ["dev"]
+    image: dspace/dspace:${DSPACE_VER:-dspace-10.1}
+    environment:
+      dspace__P__server__P__url: http://localhost:8080/server
+      dspace__P__ui__P__url: http://localhost:4001
+      dspace__P__name: OME development repository
+      mail__P__admin: ${DSPACE_ADMIN_EMAIL:-admin@ome.test}
+      db__P__url: jdbc:postgresql://dspace-db:5432/dspace
+      db__P__username: dspace
+      db__P__password: ${DSPACE_DB_PASSWORD:-dspace}
+      solr__P__server: http://dspace-solr:8983/solr
+      proxies__P__trusted__P__ipranges: 172.21.0
+      swordv2__D__server__P__enabled: "true"
+    ports:
+      - 8080:8080
+    networks:
+      - my_network
+    depends_on:
+      dspace-db:
+        condition: service_healthy
+      dspace-solr:
+        condition: service_healthy
+    volumes:
+      - dspace_assetstore:/dspace/assetstore
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /dspace/bin/dspace database migrate
+        java -jar /dspace/webapps/server-boot.jar
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/server/api > /dev/null"]
+      interval: 15s
+      retries: 20
+      start_period: 120s
+
+  dspace-ui:
+    profiles: ["dspace-ui"]
+    image: dspace/dspace-angular:${DSPACE_VER:-dspace-10.1}-dist
+    environment:
+      DSPACE_UI_SSL: "false"
+      DSPACE_UI_HOST: 0.0.0.0
+      DSPACE_UI_PORT: "4000"
+      DSPACE_UI_NAMESPACE: /
+      DSPACE_REST_SSL: "false"
+      DSPACE_REST_HOST: localhost
+      DSPACE_REST_PORT: "8080"
+      DSPACE_REST_NAMESPACE: /server
+      DSPACE_REST_SSRBASEURL: http://dspace:8080/server
+    entrypoint: ["node", "dist/server/main.js"]
+    ports:
+      - 4001:4000
+    networks:
+      - my_network
+    depends_on:
+      dspace:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null --header \"Host: localhost:4000\" http://127.0.0.1:4000/ || exit 1"]
+      interval: 15s
+      retries: 20
+      start_period: 30s
+
 secrets:
   ome_config:
     file: ./config.json
+
+volumes:
+  dspace_pgdata:
+  dspace_solr_data:
+  dspace_assetstore:
 
 networks:
   my_network:
@@ -60,3 +172,4 @@ networks:
       config:
         - subnet: 172.21.0.0/24
           gateway: 172.21.0.1   # This is crucial for the nntp config to work.
+          ip_range: 172.21.0.128/25   # dynamic addresses only from .128, the fixed ones stay below
