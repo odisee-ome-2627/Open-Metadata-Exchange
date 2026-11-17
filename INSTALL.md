@@ -66,3 +66,33 @@ to restart the containers, not rebuild them. The contents of the file should loo
 ## Frontend
 
 ### Integration into your platform
+
+## DSpace test repository (development only)
+
+A local DSpace 10.1 to test OME against (ADR 0010). It only starts with the profile `dev`.
+It needs about 2 GB of free Docker memory and port 8080. Put the DSpace variables from
+`.env.example` in `.env` before the first start.
+
+```sh
+docker compose --profile dev up -d     # start OME and DSpace
+docker compose --profile dev --profile dspace-ui up -d   # also the DSpace UI
+docker compose --profile "*" down      # stop everything, the data stays
+docker compose --profile "*" down -v   # stop and delete all DSpace data
+```
+
+### Create the admin
+
+```sh
+docker compose --profile dev exec dspace /dspace/bin/dspace create-administrator \
+  -e admin@ome.test -f Admin -l OME -p <DSPACE_ADMIN_PASSWORD> -c en
+```
+
+### URLs
+
+- REST API: `http://localhost:8080/server/api`
+- OAI-PMH, where OME reads: `http://localhost:8080/server/oai/request?verb=Identify`
+- SWORD v2, where OME saves: `http://localhost:8080/server/swordv2/servicedocument`
+- DSpace UI, only with the profile `dspace-ui`: `http://localhost:4001`
+
+New items only show up in OAI-PMH after
+`docker compose --profile dev exec dspace /dspace/bin/dspace oai import`.
