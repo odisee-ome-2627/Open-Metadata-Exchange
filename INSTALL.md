@@ -80,12 +80,16 @@ docker compose --profile "*" down      # stop everything, the data stays
 docker compose --profile "*" down -v   # stop and delete all DSpace data
 ```
 
-### Create the admin
+### Admin, collection and deposit account
+
+Run this after every fresh start. It is safe to run again.
 
 ```sh
-docker compose --profile dev exec dspace /dspace/bin/dspace create-administrator \
-  -e admin@ome.test -f Admin -l OME -p <DSPACE_ADMIN_PASSWORD> -c en
+uv run --env-file .env scripts/dspace_bootstrap.py
 ```
+
+It creates the admin, the collection `Course material` in the community `OME test`, and the
+deposit account that OME saves with. Put the two lines it prints in `.env`.
 
 ### URLs
 
