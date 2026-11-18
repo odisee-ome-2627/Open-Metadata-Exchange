@@ -121,7 +121,7 @@ services:
       - /bin/bash
       - -c
       - |
-        /dspace/bin/dspace database migrate
+        /dspace/bin/dspace database migrate &&
         java -jar /dspace/webapps/server-boot.jar
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/server/api > /dev/null"]
