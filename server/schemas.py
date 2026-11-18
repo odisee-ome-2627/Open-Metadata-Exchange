@@ -106,6 +106,12 @@ class CardRef(BaseModel):
     id: int
 
 
+class SaveResponse(BaseModel):
+    status: str
+    cms_id: str
+    cms_url: str
+
+
 #######
 
 

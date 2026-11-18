@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from server.schemas import (
     Metadata,
+    SaveResponse,
     _spdx_license_id_to_name_map,
     spdx_id_to_full_name,
 )
@@ -62,3 +63,12 @@ def test_spdx_license_invalid(spdx_license: str) -> None:
             alignment_tags=[],
             keywords=[],
         )
+
+
+def test_save_response_accepts_the_example_from_the_frontend_mock() -> None:
+    example = {
+        "status": "saved",
+        "cms_id": "148252",
+        "cms_url": "https://cms.example.org/courses/148252",
+    }
+    assert SaveResponse(**example).model_dump() == example
