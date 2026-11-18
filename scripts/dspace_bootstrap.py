@@ -162,6 +162,11 @@ def ensure_collection(client: httpx2.Client, community_uuid: str, name: str) -> 
 def ensure_eperson(client: httpx2.Client, email: str, password: str) -> dict:
     response = client.get("eperson/epersons/search/byEmail", params={"email": email})
     if response.status_code == httpx2.codes.OK:
+        print(
+            f"The deposit account {email} already exists,"
+            " so DSPACE_DEPOSIT_PASSWORD is not applied.",
+            file=sys.stderr,
+        )
         return response.json()
     if response.status_code != httpx2.codes.NO_CONTENT:  # 204 means: no such account
         response.raise_for_status()

@@ -110,9 +110,12 @@ def run(fake: FakeDSpace) -> dict:
         return dspace_bootstrap.bootstrap(client, SETTINGS, fake.create_admin)
 
 
-def test_empty_dspace_gets_admin_collection_and_deposit_account() -> None:
+def test_empty_dspace_gets_admin_collection_and_deposit_account(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     fake = FakeDSpace(complete=False)
     assert run(fake) == COLLECTION
+    assert "already exists" not in capsys.readouterr().err
     # DSpace caches a failed login, so the admin must exist before the first one
     assert fake.failed_logins == 0
     assert fake.posts == [
@@ -129,6 +132,15 @@ def test_second_run_changes_nothing() -> None:
     fake = FakeDSpace(complete=True)
     assert run(fake) == COLLECTION
     assert fake.posts == []
+
+
+def test_an_existing_deposit_account_keeps_its_password_with_a_warning(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    run(FakeDSpace(complete=True))
+    captured = capsys.readouterr()
+    assert "DSPACE_DEPOSIT_PASSWORD is not applied" in captured.err
+    assert captured.out == ""  # stdout only holds the lines for .env
 
 
 def test_an_error_while_looking_up_the_account_stops_the_script() -> None:
