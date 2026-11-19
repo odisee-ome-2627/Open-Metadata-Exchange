@@ -1,5 +1,9 @@
 #!/usr/bin/bash
 
+{% for group in local_newsgroups %}
+ctlinnd newgroup {{group}}
+{% endfor %}
+
 {% for peer in peers %}
 /usr/lib/news/bin/actsync -v 4 -m -ox -p 0  localhost {{peer.dns_name}}:{{peer.port}}
 /usr/lib/news/bin/getlist -h localhost | \
