@@ -93,6 +93,10 @@ deposit account that OME saves with. Put the two lines it prints in `.env`.
 
 ### URLs
 
+On a server, set `DSPACE_HOST` in `.env` to its public address before the bootstrap and the
+seed. Every item stores the link to its page, and other nodes open it, so items made with
+`localhost` keep that link. Use `localhost` below on your own machine.
+
 - REST API: `http://localhost:8080/server/api`
 - OAI-PMH, where OME reads: `http://localhost:8080/server/oai/request?verb=Identify`
 - SWORD v2, where OME saves: `http://localhost:8080/server/swordv2/servicedocument`
