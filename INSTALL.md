@@ -91,6 +91,21 @@ uv run --env-file .env scripts/dspace_bootstrap.py
 It creates the admin, the collection `Course material` in the community `OME test`, and the
 deposit account that OME saves with. Put the two lines it prints in `.env`.
 
+### Test items
+
+Fill the collection after the bootstrap. It is safe to run again: items that are already
+there are skipped.
+
+```sh
+uv run --env-file .env scripts/seed_dspace.py              # the open set in seed/open
+uv run --env-file .env scripts/seed_dspace.py seed/local   # course material, never in git
+```
+
+`seed/open/manifest.json` shows the format. Only `id` and `title` are required, and `id`
+must never change. A `file` (PDF, EPUB, dataset) is uploaded with the item, a `url` is only a link.
+Put course material and its files in `seed/local/`, which is in
+`.gitignore`. The script runs `dspace oai import` at the end, so OME sees the new items.
+
 ### URLs
 
 On a server, set `DSPACE_HOST` in `.env` to its public address before the bootstrap and the
