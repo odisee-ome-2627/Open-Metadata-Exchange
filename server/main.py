@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 import httpx2
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +21,7 @@ from server.schemas import (
     ExploreSummary,
     MiniMetadata,
     Post,
+    SaveResponse,
 )
 from server.utils import (
     browse_results,
@@ -117,6 +118,12 @@ async def create_post(meta: MiniMetadata) -> bool:
 @app.post("/api/channel/{name}/import")
 async def import_post(name: str, card: CardRef) -> bool:
     return ome_node.import_post(name, card.id)
+
+
+@app.post("/api/channel/{name}/save")
+async def save_card(name: str, card: CardRef) -> SaveResponse:  # noqa: ARG001 - stub until #229
+    """Save a card into the local CMS. Stub until #229: no plugin can save yet."""
+    raise HTTPException(501, detail="This plugin cannot save cards")
 
 
 @app.get("/api/imls/v2/collections/browse/")
