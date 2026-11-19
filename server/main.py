@@ -120,7 +120,27 @@ async def import_post(name: str, card: CardRef) -> bool:
     return ome_node.import_post(name, card.id)
 
 
-@app.post("/api/channel/{name}/save")
+@app.post(
+    "/api/channel/{name}/save",
+    responses={
+        404: {"description": "Card not found"},
+        409: {
+            "description": "Already saved",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": {
+                            # this will get filled in with issue odisee-ome-2627#228
+                            "cms_url": "https://cms.example.com/42"
+                        }
+                    }
+                },
+            },
+        },
+        501: {"description": "Plugin cannot save"},
+        502: {"description": "CMS unreachable"},
+    },
+)
 async def save_card(name: str, card: CardRef) -> SaveResponse:  # noqa: ARG001 - stub until #229
     """Save a card into the local CMS. Stub until #229: no plugin can save yet."""
     raise HTTPException(501, detail="This plugin cannot save cards")
