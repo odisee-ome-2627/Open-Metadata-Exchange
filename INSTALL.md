@@ -101,7 +101,7 @@ uv run --env-file .env scripts/seed_dspace.py              # the open set in see
 uv run --env-file .env scripts/seed_dspace.py seed/local   # course material, never in git
 ```
 
-`seed/open/manifest.json` shows the format. Only `id` and `title` are required, and `id`
+`seed/open/manifest.json` shows the format. Only `id`, `title` and `licence` are required, and `id`
 must never change. A `file` (PDF, EPUB, dataset) is uploaded with the item, a `url` is only a link.
 Put course material and its files in `seed/local/`, which is in
 `.gitignore`. The script runs `dspace oai import` at the end, so OME sees the new items.
