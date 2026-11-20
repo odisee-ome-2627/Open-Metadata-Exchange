@@ -95,6 +95,8 @@ def login(client: httpx2.Client, email: str, password: str) -> bool:
 
 def create_admin_in_container(email: str, password: str) -> None:
     """The first admin can only be made inside the backend container."""
+    # The password goes in by name through the environment, so it is not in this
+    # command: `ps` on the host and the error of a failed run do not show it.
     subprocess.run(  # noqa: S603
         [  # noqa: S607
             "docker",
@@ -103,22 +105,21 @@ def create_admin_in_container(email: str, password: str) -> None:
             "dev",
             "exec",
             "-T",
-            "dspace",
-            "/dspace/bin/dspace",
-            "create-administrator",
             "-e",
-            email,
-            "-f",
-            "Admin",
-            "-l",
-            "OME",
-            "-p",
-            password,
+            "OME_ADMIN_PASSWORD",
+            "dspace",
+            "sh",
             "-c",
-            "en",
+            (
+                '/dspace/bin/dspace create-administrator -e "$1" -f Admin -l OME'
+                ' -p "$OME_ADMIN_PASSWORD" -c en'
+            ),
+            "create-administrator",
+            email,
         ],
         check=True,
         cwd=REPO_ROOT,  # docker compose looks for docker-compose.yml here
+        env={**os.environ, "OME_ADMIN_PASSWORD": password},
         stdout=sys.stderr,  # keep stdout for the two lines that go into .env
     )
 

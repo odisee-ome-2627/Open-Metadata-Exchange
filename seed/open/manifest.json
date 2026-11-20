@@ -1,0 +1,196 @@
+{
+  "items": [
+    {
+      "id": "oapen-50001",
+      "title": "Think Python: How to Think Like a Computer Scientist",
+      "description": "Think Python is an introduction to Python programming for beginners. It starts with basic concepts of programming, and is carefully designed to define all terms when they are first used and to develop each new concept in a logical progression.",
+      "authors": [
+        "Downey, Allen B."
+      ],
+      "subjects": [
+        "Python",
+        "programming",
+        "computer science"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2015",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50001"
+    },
+    {
+      "id": "oapen-50002",
+      "title": "Python for Everybody: Exploring Data Using Python 3",
+      "description": "This book is designed to introduce students to programming and computational thinking through the lens of exploring data. You can think of Python as your tool to solve data problems that are beyond the capability of a spreadsheet.",
+      "authors": [
+        "Severance, Charles R."
+      ],
+      "subjects": [
+        "Python",
+        "data science",
+        "programming"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2016",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50002"
+    },
+    {
+      "id": "oapen-50003",
+      "title": "Python Data Science Handbook",
+      "description": "This book introduces the core libraries essential for working with data in Python: particularly IPython, NumPy, Pandas, Matplotlib, Scikit-Learn, and related packages.",
+      "authors": [
+        "VanderPlas, Jake"
+      ],
+      "subjects": [
+        "Python",
+        "data science",
+        "machine learning"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2016",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50003"
+    },
+    {
+      "id": "oapen-50004",
+      "title": "Automate the Boring Stuff with Python",
+      "description": "A practical programming guide for office workers, academics, and anyone who wants to save time and improve productivity by automating tasks on their computers using Python.",
+      "authors": [
+        "Sweigart, Al"
+      ],
+      "subjects": [
+        "Python",
+        "automation",
+        "scripting"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2019",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50004"
+    },
+    {
+      "id": "oapen-50005",
+      "title": "Python Programming: An Introduction to Computer Science",
+      "description": "This book is designed to be used as the primary textbook in a college-level first course in computing. The focus is on teaching Python programming fundamentals through hands-on problem solving.",
+      "authors": [
+        "Zelle, John M."
+      ],
+      "subjects": [
+        "Python",
+        "introductory programming",
+        "computer science education"
+      ],
+      "licence": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+      "date": "2017",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50005"
+    },
+    {
+      "id": "oapen-50006",
+      "title": "Introduction to Scientific Programming with Python",
+      "description": "This open-access textbook introduces scientific programming using Python, covering numerical methods, data structures, and visualization tools used in scientific computing.",
+      "authors": [
+        "Sundnes, Joakim"
+      ],
+      "subjects": [
+        "Python",
+        "scientific computing",
+        "numerical methods"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2020",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50006"
+    },
+    {
+      "id": "oapen-50007",
+      "title": "Programming Basics with Python",
+      "description": "A comprehensive introductory programming textbook using Python as the teaching language, covering algorithms, data structures, object-oriented programming, and software engineering principles.",
+      "authors": [
+        "Nakov, Svetlin"
+      ],
+      "subjects": [
+        "Python",
+        "algorithms",
+        "data structures"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2021",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50007"
+    },
+    {
+      "id": "oapen-50008",
+      "title": "Python Machine Learning",
+      "description": "An accessible and comprehensive guide to machine learning with Python and scikit-learn, covering supervised and unsupervised learning, neural networks, and deep learning.",
+      "authors": [
+        "Raschka, Sebastian",
+        "Mirjalili, Vahid"
+      ],
+      "subjects": [
+        "Python",
+        "machine learning",
+        "deep learning"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2019",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50008"
+    },
+    {
+      "id": "oapen-50009",
+      "title": "Computational and Inferential Thinking: The Foundations of Data Science",
+      "description": "The textbook for the Foundations of Data Science course at UC Berkeley, covering Python programming, data visualization, statistical inference, and prediction.",
+      "authors": [
+        "Adhikari, Ani",
+        "DeNero, John"
+      ],
+      "subjects": [
+        "Python",
+        "data science",
+        "statistics"
+      ],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2021",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50009"
+    },
+    {
+      "id": "oapen-50010",
+      "title": "Dive into Python 3",
+      "description": "A hands-on guide to Python 3 for experienced programmers, covering native datatypes, comprehensions, generators, classes, iterators, advanced iterators, unit testing, and more.",
+      "authors": [
+        "Pilgrim, Mark"
+      ],
+      "subjects": [
+        "Python",
+        "programming"
+      ],
+      "licence": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "date": "2009",
+      "type": "book",
+      "language": "en",
+      "url": "https://library.oapen.org/handle/20.500.12657/50010"
+    },
+    {
+      "id": "odisee-ome-test-pdf",
+      "title": "OME test document",
+      "description": "A one-page PDF to test file uploads with the seed script.",
+      "authors": ["Odisee, OME team"],
+      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "date": "2026",
+      "type": "Text",
+      "language": "en",
+      "file": "ome-test-document.pdf"
+    }
+  ]
+}

@@ -104,6 +104,23 @@ class FakeDSpace:
         return httpx2.Response(204)
 
 
+def test_the_admin_password_is_not_in_the_docker_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runs: list[tuple[list[str], dict]] = []
+    monkeypatch.setattr(
+        dspace_bootstrap.subprocess,
+        "run",
+        lambda command, **options: runs.append((command, options)),
+    )
+    email, password = SETTINGS.admin_email, SETTINGS.admin_password
+    dspace_bootstrap.create_admin_in_container(email, password)
+    [(command, options)] = runs
+    assert not any(password in part for part in command)
+    assert options["env"]["OME_ADMIN_PASSWORD"] == password
+    assert email in command
+
+
 def run(fake: FakeDSpace) -> dict:
     transport = httpx2.MockTransport(fake.handle)
     with dspace_bootstrap.make_client(BASE, transport) as client:
