@@ -99,6 +99,9 @@ services:
       # Every item stores a link to dspace.ui.url, and other nodes open it (DSPACE_HOST in .env)
       dspace__P__server__P__url: http://${DSPACE_HOST:-localhost}:8080/server
       dspace__P__ui__P__url: http://${DSPACE_HOST:-localhost}:4001
+      # The UI server asks the backend over the compose network (DSPACE_REST_SSRBASEURL).
+      # Without this, the backend rejects those links as "not ours" and a file link gives 403.
+      dspace__P__server__P__ssr__P__url: http://dspace:8080/server
       dspace__P__name: OME development repository
       mail__P__admin: ${DSPACE_ADMIN_EMAIL:-admin@ome.test}
       db__P__url: jdbc:postgresql://dspace-db:5432/dspace
