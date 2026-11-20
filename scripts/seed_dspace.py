@@ -27,6 +27,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx2
 from dspace_bootstrap import (
@@ -51,6 +52,7 @@ TEXT_FIELDS = (
     "file",
 )
 LIST_FIELDS = ("authors", "subjects")
+LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 
 
 @dataclass(frozen=True)
@@ -135,6 +137,24 @@ def to_metadata(item: SeedItem) -> dict[str, list[dict[str, str]]]:
         for key, values in fields.items()
         if any(values)
     }
+
+
+def warn_if_local(client: httpx2.Client) -> None:
+    """Warn when item links will point to this machine.
+
+    DSpace builds dc.identifier.uri from dspace.ui.url. It becomes the source_url
+    of the card, which never changes once it is on NNTP. Only a warning, because
+    localhost is right on a laptop.
+    """
+    # The root of the API: DSpace answers 404 on .../server/api/ with a slash
+    root = str(client.base_url).rstrip("/")
+    ui_url = json_of(client.get(root))["dspaceUI"]
+    if urlparse(ui_url).hostname in LOCAL_HOSTS:
+        print(
+            f"Warning: items will link to {ui_url}."
+            " Set DSPACE_HOST in .env before seeding a server.",
+            file=sys.stderr,
+        )
 
 
 def existing_seed_ids(client: httpx2.Client, collection_uuid: str) -> set[str]:
@@ -272,6 +292,7 @@ def main() -> None:
     items = read_manifest(args.folder)
     with make_client(args.url) as client:
         wait_for_dspace(client)
+        warn_if_local(client)
         if not login(client, env["DSPACE_ADMIN_EMAIL"], env["DSPACE_ADMIN_PASSWORD"]):
             msg = "Cannot log in as the DSpace admin. Check DSPACE_ADMIN_PASSWORD"
             raise SystemExit(msg)

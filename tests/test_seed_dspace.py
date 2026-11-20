@@ -23,6 +23,7 @@ BASE = "http://dspace.test/server"
 CC_BY = "https://creativecommons.org/licenses/by/4.0/"
 EPUB_PART = b'filename="book.epub"\r\nContent-Type: application/epub+zip'
 NEW_ITEM = {"uuid": "item-1", "handle": "123456789/9"}
+PUBLIC_UI = "http://dspace.test:4001"
 MAKE_CLIENT = seed_dspace.make_client  # main() tests replace it in the module
 
 Handler = Callable[[httpx2.Request], httpx2.Response]
@@ -65,20 +66,24 @@ def search_page(identifiers: list[str | None], total_pages: int) -> dict:
     }
 
 
-def fake_dspace(existing: list[str | None], calls: list[str]) -> Handler:
+def fake_dspace(
+    existing: list[str | None], calls: list[str], ui_url: str = PUBLIC_UI
+) -> Handler:
     """A DSpace that knows the given items, creates new ones and logs every call."""
+    routes = {  # end of the path: status, JSON body, headers
+        "/api": (200, {"dspaceUI": ui_url}, {}),  # the root, DSpace wants no slash
+        "/authn/login": (200, None, {"Authorization": "Bearer token"}),
+        "/security/csrf": (204, None, {}),
+        "/core/items": (201, NEW_ITEM, {}),
+        "/bundles": (201, {"uuid": "bundle-1"}, {}),
+    }
 
     def handle(request: httpx2.Request) -> httpx2.Response:
         calls.append(f"{request.method} {request.url.path}")
         path = request.url.path
-        if path.endswith("/authn/login"):
-            return httpx2.Response(200, headers={"Authorization": "Bearer token"})
-        if path.endswith("/security/csrf"):
-            return httpx2.Response(204)
-        if path.endswith("/core/items"):
-            return httpx2.Response(201, json=NEW_ITEM)
-        if path.endswith("/bundles"):
-            return httpx2.Response(201, json={"uuid": "bundle-1"})
+        for end, (status, body, headers) in routes.items():
+            if path.endswith(end):
+                return httpx2.Response(status, json=body, headers=headers)
         if request.method == "DELETE":
             return httpx2.Response(204)
         return httpx2.Response(200, json=search_page(existing, total_pages=1))
@@ -249,6 +254,7 @@ def run_main(
     tmp_path: Path,
     existing: list[str | None],
     *flags: str,
+    ui_url: str = PUBLIC_UI,
 ) -> list[str]:
     """Run main() against a fake DSpace and return the calls, `oai import` included."""
     calls: list[str] = []
@@ -260,7 +266,7 @@ def run_main(
     monkeypatch.setattr(
         seed_dspace,
         "make_client",
-        lambda _url: client_for(fake_dspace(existing, calls)),
+        lambda _url: client_for(fake_dspace(existing, calls, ui_url)),
     )
     monkeypatch.setattr(seed_dspace, "oai_import", lambda: calls.append("oai import"))
     seed_dspace.main()
@@ -289,6 +295,25 @@ def test_main_skips_oai_import_with_the_flag(
 ) -> None:
     calls = run_main(monkeypatch, tmp_path, [], "--no-oai-import")
     assert "oai import" not in calls
+
+
+@pytest.mark.parametrize("ui_url", ["http://localhost:4001", "http://127.0.0.1:4001"])
+def test_main_warns_when_items_will_link_to_this_machine(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture,
+    ui_url: str,
+) -> None:
+    calls = run_main(monkeypatch, tmp_path, [], ui_url=ui_url)
+    assert f"Warning: items will link to {ui_url}" in capsys.readouterr().err
+    assert "POST /server/api/core/items" in calls  # a warning, not an error
+
+
+def test_main_does_not_warn_for_a_public_address(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    run_main(monkeypatch, tmp_path, [])
+    assert "Warning" not in capsys.readouterr().err
 
 
 def test_main_stops_without_the_collection_from_the_bootstrap(
