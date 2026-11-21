@@ -56,6 +56,7 @@ server/plugins
 :maxdepth: 1
 
 collage_photos/README.md
+dspace/README.md
 early_learning/README.md
 eric/README.md
 mit_opencourseware/README.md

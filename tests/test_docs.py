@@ -13,6 +13,10 @@ import pytest
 PLUGINS_DIR = Path(__file__).resolve().parent.parent / "server" / "plugins"
 DOCS_BASE_URL = "https://iskme.github.io/Open-Metadata-Exchange"
 
+# Plugins whose docs page only exists after the upstream merge. Remove a plugin
+# from this set once its page is live on GitHub Pages.
+NOT_PUBLISHED_YET = {"dspace"}
+
 
 def _plugin_names() -> list[str]:
     """Return sorted list of plugin directory names (excluding non-plugin entries)."""
@@ -28,7 +32,21 @@ async def _get(url: str) -> httpx2.Response:
         return await httpx_async_client.get(url, follow_redirects=True)
 
 
-@pytest.mark.parametrize("plugin_name", _plugin_names())
+@pytest.mark.parametrize(
+    "plugin_name",
+    [
+        pytest.param(
+            name,
+            marks=pytest.mark.xfail(
+                reason="The docs page is published after the upstream merge",
+                strict=False,
+            ),
+        )
+        if name in NOT_PUBLISHED_YET
+        else name
+        for name in _plugin_names()
+    ],
+)
 def test_plugin_docs_page_exists(plugin_name: str) -> None:
     """Each plugin must have a documentation page on GitHub Pages."""
     url = f"{DOCS_BASE_URL}/server/plugins/{plugin_name}/README.html"

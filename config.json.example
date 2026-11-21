@@ -19,5 +19,14 @@
 	"username": "debugreader",
 	"password": "debugreader"
     },
-    "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin"
+    "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin",
+
+    "dspace": {
+	"oai_url": "http://dspace:8080/server/oai/request",
+	"collection_handle": "123456789/2",
+	"newsgroup": "ome.odisee",
+	"site_name": "Odisee",
+	"logo": "https://example.org/logo.png",
+	"librarian_contact": "librarian@example.org"
+    }
 }

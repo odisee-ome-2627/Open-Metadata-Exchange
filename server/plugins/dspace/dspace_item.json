@@ -1,0 +1,31 @@
+{
+  "identifier": "oai:localhost:123456789/3",
+  "datestamp": "2026-11-20T10:18:48Z",
+  "set_specs": ["com_123456789_1", "col_123456789_2"],
+  "fields": [
+    {"mdschema": "dc", "element": "contributor", "qualifier": "author", "value": "Sarah J. Mitchell"},
+    {"mdschema": "dc", "element": "contributor", "qualifier": "author", "value": "John Doe"},
+    {"mdschema": "dc", "element": "date", "qualifier": "accessioned", "value": "2026-11-20T10:08:43Z"},
+    {"mdschema": "dc", "element": "date", "qualifier": "issued", "value": "2023-01"},
+    {"mdschema": "dc", "element": "identifier", "qualifier": "citation", "value": "Mitchell, S. J. (2023). Introduction to Artificial Intelligence and Machine Learning (3rd ed.). Academic Learning Press."},
+    {"mdschema": "dc", "element": "identifier", "qualifier": "isbn", "value": "978-1-23456-789-7"},
+    {"mdschema": "dc", "element": "identifier", "qualifier": "uri", "value": "http://localhost:4001/handle/123456789/3"},
+    {"mdschema": "dc", "element": "description", "value": "An introductory textbook covering the fundamentals of artificial intelligence, machine learning algorithms, neural networks, and practical applications."},
+    {"mdschema": "dc", "element": "description", "qualifier": "abstract", "value": "This textbook introduces the fundamental concepts of artificial intelligence and machine learning. Topics include search algorithms, knowledge representation, supervised and unsupervised learning, neural networks, model evaluation, and ethical considerations. Practical examples and case studies help students understand real-world AI applications across multiple industries."},
+    {"mdschema": "dc", "element": "description", "qualifier": "sponsorship", "value": "Department of Computer Science, Westbridge University; TechFuture Education Foundation"},
+    {"mdschema": "dc", "element": "language", "qualifier": "iso", "value": "en"},
+    {"mdschema": "dc", "element": "publisher", "value": "Academic Learning Press"},
+    {"mdschema": "dc", "element": "relation", "qualifier": "ispartofseries", "value": "Modern Computing Series; Vol. 12; ALP-AI-2023-015"},
+    {"mdschema": "dc", "element": "rights", "value": "Attribution 4.0 International"},
+    {"mdschema": "dc", "element": "rights", "qualifier": "uri", "value": "https://creativecommons.org/licenses/by/4.0/"},
+    {"mdschema": "dc", "element": "subject", "value": "Artificial Intelligence"},
+    {"mdschema": "dc", "element": "subject", "value": "Machine Learning"},
+    {"mdschema": "dc", "element": "subject", "value": "Data Science"},
+    {"mdschema": "dc", "element": "subject", "value": "Neural Networks"},
+    {"mdschema": "dc", "element": "title", "value": "Introduction to Artificial Intelligence and Machine Learning"},
+    {"mdschema": "dc", "element": "title", "qualifier": "alternative", "value": "Foundations of AI"},
+    {"mdschema": "dc", "element": "title", "qualifier": "alternative", "value": "AI Concepts for Beginners"},
+    {"mdschema": "dc", "element": "type", "value": "Book"},
+    {"mdschema": "others", "element": "access-status", "value": "open.access"}
+  ]
+}

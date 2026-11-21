@@ -140,7 +140,8 @@ async def create_post(meta: MiniMetadata) -> bool:
     )
     sent = ome_node.create_post(post)
     print(f"Sent: {sent}")
-    return sent
+    # pynntp returns the Message-ID (or True); a failed post raises instead.
+    return bool(sent)
 
 
 @app.post("/api/channel/{name}/import")
