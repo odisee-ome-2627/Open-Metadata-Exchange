@@ -63,6 +63,12 @@ def test_a_post_without_a_card_uses_its_subject_and_body() -> None:
     assert (resource.title, resource.abstract) == ("Subject", "Body")
 
 
+def test_a_card_without_a_date_gets_the_date_of_the_post() -> None:
+    resource = utils.post_to_page(a_post(metadata_json(CARD))).resource
+    assert CARD.creation_date is None
+    assert resource.createDate == datetime(2026, 11, 21, tzinfo=UTC)
+
+
 def test_summary_and_details_carry_the_channel() -> None:
     post = a_post(metadata_json(CARD))
     assert utils.post_to_summary(post).channel == CHANNEL

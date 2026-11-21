@@ -343,7 +343,8 @@ def post_to_page(post: Post) -> ResourcePageResponse:
             authors=card.authors,
             generalSubjects=card.subject_tags,
             collections_titles=[channel],
-            createDate=card.creation_date,
+            # A card without a date would show "Jan 01 1970" on the page
+            createDate=card.creation_date or post.date,
             updateDate=card.last_modified_date or post.date,
             license_title=card.spdx_license_expression,
             micrositeResourceURL=card.source_url,
