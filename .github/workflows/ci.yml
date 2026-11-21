@@ -50,6 +50,21 @@ jobs:
         ports:
           - 119:119
           - 563:563
+      ome-db:  # the node database for tests/test_db*.py
+        image: postgres:18  # zizmor: ignore[unpinned-images]
+        env:
+          POSTGRES_DB: ome
+          POSTGRES_USER: ome
+          POSTGRES_PASSWORD: ome
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ome -d ome"
+          --health-interval 5s
+          --health-retries 20
+    env:
+      # A throwaway database for this run only, so the password may be in the URL
+      OME_DATABASE_URL: postgresql://ome:ome@localhost:5432/ome
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

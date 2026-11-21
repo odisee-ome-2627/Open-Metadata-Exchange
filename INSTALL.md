@@ -59,6 +59,41 @@ to restart the containers, not rebuild them. The contents of the file should loo
 
 [^1]: The IP address that is seen inside your Docker container might be NATted. e.g., 172.21.0.1, the gateway of the docker network.
 
+## The node database
+
+Every node has its own PostgreSQL (`ome-db`) for state that never goes over
+NNTP: which cards were saved under which CMS ID, and later the subscribed
+channels. FastAPI opens it at start and applies the SQL files in
+`server/migrations/` that are new. Without `OME_DATABASE_URL` FastAPI starts
+without it.
+
+Its password is the Docker secret `ome_db_password`, a file next to
+`config.json` that is never in git. Create it once:
+
+```sh
+openssl rand -base64 24 > ome_db_password
+```
+
+```sh
+docker compose up -d ome-db                                   # start
+docker compose exec ome-db psql -U ome -d ome                 # inspect, \dt lists the tables
+docker compose down && docker compose up -d                   # the data stays
+docker compose rm -sf ome-db && docker volume rm "$(docker volume ls -q | grep '_ome_pgdata$')"   # reset: empty database
+```
+
+`ome-db` publishes no port. FastAPI reaches it over the compose network, and
+`psql` runs inside the container. The tests use a throwaway database of their
+own, so they never touch the data of the node:
+
+```sh
+docker run -d --rm --name ome-db-test -e POSTGRES_DB=ome -e POSTGRES_USER=ome \
+  -e POSTGRES_PASSWORD=ome -p 127.0.0.1:15432:5432 postgres:18
+OME_DATABASE_URL=postgresql://ome:ome@127.0.0.1:15432/ome uv run pytest tests/test_db.py
+docker stop ome-db-test
+```
+
+Without `OME_DATABASE_URL` those tests are skipped.
+
 ## Backend
 
 ### Plugin
