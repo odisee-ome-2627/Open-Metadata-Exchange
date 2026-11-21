@@ -22,7 +22,7 @@
 
     "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin",
 
-		"local_newsgroups": [
-		"ome.test"
-	]
+    "local_newsgroups": [
+	"ome.test"
+    ]
 }

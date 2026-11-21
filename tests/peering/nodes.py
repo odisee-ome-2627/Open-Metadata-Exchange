@@ -1,14 +1,12 @@
 """
 Helpers for the peering test: run commands on the two INN nodes of compose.yaml.
 """
-# ruff: noqa: UP047
 
 import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeVar
 
 import pytest
 
@@ -20,10 +18,7 @@ READY_TIMEOUT = 60  # seconds for innd to accept commands after the container st
 BUILD_TIMEOUT = 900  # seconds for the first image build
 
 
-T = TypeVar("T")
-
-
-def wait_for(check: Callable[[], T | None], timeout: float) -> T | None:
+def wait_for[T](check: Callable[[], T | None], timeout: float) -> T | None:
     """Call check() every second until it returns a value or the timeout ends."""
     deadline = time.monotonic() + timeout
     while True:
@@ -35,7 +30,7 @@ def wait_for(check: Callable[[], T | None], timeout: float) -> T | None:
 
 
 def _text(output: bytes | str | None) -> str:
-    """Convert command output to text."""
+    """Partial output of a timed-out command: TimeoutExpired keeps it as bytes."""
     if isinstance(output, bytes):
         return output.decode(errors="replace")
     return output or ""
@@ -55,37 +50,29 @@ class PeeringNodes:
         timeout: float = 60,
     ) -> subprocess.CompletedProcess[str]:
         command = [self.docker, "compose", "-f", str(COMPOSE_FILE), *args]
-
         try:
-            result = subprocess.run(  # noqa: S603
+            result = subprocess.run(  # noqa: S603 - fixed arguments, no shell
                 command,
-                input=input_text.encode("utf-8") if input_text is not None else None,
+                input=input_text,
                 capture_output=True,
-                text=False,
+                text=True,
                 check=False,
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired as error:
+            # A hanging command counts as a failed attempt, so wait_for keeps
+            # waiting and the normal failure message with the logs still shows up.
             result = subprocess.CompletedProcess(
                 command,
-                returncode=124,
-                stdout=error.stdout,
-                stderr=error.stderr,
+                returncode=124,  # exit code of timeout(1)
+                stdout=_text(error.stdout),
+                stderr=f"{_text(error.stderr)}Timed out after {timeout} s\n",
             )
-
-        result = subprocess.CompletedProcess(
-            command,
-            result.returncode,
-            stdout=_text(result.stdout),
-            stderr=_text(result.stderr),
-        )
-
         if check and result.returncode != 0:
             pytest.fail(
                 f"Command failed with exit code {result.returncode}: "
                 f"{' '.join(command)}\n{result.stdout}{result.stderr}"
             )
-
         return result
 
     def exec(
@@ -97,15 +84,10 @@ class PeeringNodes:
     ) -> subprocess.CompletedProcess[str]:
         """Run a command inside a node. -T because pytest has no terminal."""
         return self.compose(
-            "exec",
-            "-T",
-            "-e",
-            "NNTPSERVER=localhost",
-            node,
-            *command,
+            "exec", "-T", "-e", "NNTPSERVER=localhost", node, *command,
             input_text=input_text,
             check=check,
-        )
+        )  # fmt: skip
 
     def is_ready(self, node: str) -> bool | None:
         """True when innd on this node accepts commands, else None (keep waiting)."""
@@ -147,15 +129,12 @@ class PeeringNodes:
         stays empty. innfeed writes its own log: drop its "queue:" debug noise.
         """
         parts = [self.compose("ps", "--all", check=False).stdout]
-
         for node in nodes:
             logs = self.exec(
                 node,
-                "sh",
-                "-c",
+                "sh", "-c",
                 "grep -v ' queue: ' /var/log/news/innfeed.log | tail -n 30",
                 check=False,
-            )
+            )  # fmt: skip
             parts.append(f"===== {node}: innfeed.log =====\n{logs.stdout}{logs.stderr}")
-
         return "\n".join(parts)
