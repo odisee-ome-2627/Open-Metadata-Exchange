@@ -2,8 +2,11 @@ import json
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from server.plugins.ome_plugin import SavedItem
 
 SPDX_LICENSES_JSON = Path(__file__).with_name("spdx_licenses.json")
 
@@ -104,6 +107,37 @@ class Post(BaseModel):
 
 class CardRef(BaseModel):
     id: int
+
+
+#######
+
+
+class SaveResponse(SavedItem):
+    """200 of `POST /api/channel/{name}/save` (#227)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "status": "saved",
+                    "cms_id": "123456789/42",
+                    "cms_url": "https://repo.example.org/handle/123456789/42",
+                }
+            ]
+        }
+    )
+
+    status: Literal["saved"] = "saved"
+
+
+class ErrorResponse(BaseModel):
+    detail: str
+
+
+class AlreadySavedResponse(BaseModel):
+    """409: the card is already in the CMS. Only returned once #228 exists."""
+
+    detail: SavedItem
 
 
 #######

@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
+from typing import Annotated
 
 import httpx2
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +11,9 @@ from jinja2 import Environment, FileSystemLoader
 
 from server import ome_node
 from server.helpers import MocAPI
+from server.plugins.ome_plugin import OMEPlugin, can_save
 from server.schemas import (
+    AlreadySavedResponse,
     Attachment,
     BrowseResponse,
     Card,
@@ -18,9 +21,11 @@ from server.schemas import (
     Channel,
     ChannelResourcesResponse,
     ChannelSummaryResponse,
+    ErrorResponse,
     ExploreSummary,
     MiniMetadata,
     Post,
+    SaveResponse,
 )
 from server.utils import (
     browse_results,
@@ -117,6 +122,60 @@ async def create_post(meta: MiniMetadata) -> bool:
 @app.post("/api/channel/{name}/import")
 async def import_post(name: str, card: CardRef) -> bool:
     return ome_node.import_post(name, card.id)
+
+
+def current_plugin() -> OMEPlugin:
+    """The plugin of this node. Later a middleware picks it per library (ADR 0011)."""
+    return ome_node.plugin
+
+
+SAVED = {
+    "cms_id": "123456789/42",
+    "cms_url": "https://repo.example.org/handle/123456789/42",
+}
+SAVE_RESPONSES = {
+    404: {
+        "model": ErrorResponse,
+        "description": "No card with this number in the channel",
+        "content": {
+            "application/json": {
+                "example": {"detail": "Card 7 not found in ome.dspace"}
+            }
+        },
+    },
+    409: {
+        "model": AlreadySavedResponse,
+        "description": "Already saved, links to the existing item (from #228)",
+        "content": {"application/json": {"example": {"detail": SAVED}}},
+    },
+    501: {
+        "model": ErrorResponse,
+        "description": "The plugin of this node cannot save",
+        "content": {
+            "application/json": {"example": {"detail": "This plugin cannot save cards"}}
+        },
+    },
+    502: {
+        "model": ErrorResponse,
+        "description": "The CMS did not answer",
+        "content": {
+            "application/json": {"example": {"detail": "The CMS is unreachable"}}
+        },
+    },
+}
+
+
+@app.post("/api/channel/{name}/save", responses=SAVE_RESPONSES)
+async def save_card(
+    name: str,
+    card: CardRef,
+    plugin: Annotated[OMEPlugin, Depends(current_plugin)],
+) -> SaveResponse:
+    """Save a card from the network into this library's CMS (ADR 0011 §3)."""
+    if not can_save(plugin):
+        raise HTTPException(501, detail="This plugin cannot save cards")
+    # Fetching the card and calling the plugin comes with #229
+    raise HTTPException(501, detail=f"Saving {name}/{card.id} is not built yet")
 
 
 @app.get("/api/imls/v2/collections/browse/")
