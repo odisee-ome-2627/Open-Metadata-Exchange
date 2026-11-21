@@ -30,6 +30,8 @@ sequenceDiagram
 
 For local development and testing, start two INN2 servers, two FastAPI servers, and two React front ends with:
 
+Create `config.json` and the file `ome_db_password` first, see [INSTALL.md](./INSTALL.md).
+
 ```bash
 docker compose build
 docker compose up

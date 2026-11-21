@@ -189,3 +189,6 @@ cython_debug/
 
 # Course material of the lecturers, never in git (#219)
 seed/local/
+
+# The password of the node database, a Docker secret (#298)
+ome_db_password

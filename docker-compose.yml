@@ -24,15 +24,38 @@ services:
       dockerfile: Dockerfile-api
     environment:
       INN_SERVER_NAME: nntp-server
+      OME_DATABASE_URL: postgresql://ome@ome-db:5432/ome
+      OME_DB_PASSWORD_FILE: /run/secrets/ome_db_password
     secrets:
       - ome_config
+      - ome_db_password
     networks:
       my_network:
         ipv4_address: 172.21.0.3
     ports:
       - 5001:8000
     depends_on:
-      - nntp-server
+      nntp-server:
+        condition: service_started
+      ome-db:
+        condition: service_healthy
+
+  ome-db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ome
+      POSTGRES_USER: ome
+      POSTGRES_PASSWORD_FILE: /run/secrets/ome_db_password
+    secrets:
+      - ome_db_password
+    networks:
+      - my_network
+    volumes:
+      - ome_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ome -d ome"]
+      interval: 5s
+      retries: 20
 
   imls-react:
     image: imlsreact
@@ -163,8 +186,11 @@ services:
 secrets:
   ome_config:
     file: ./config.json
+  ome_db_password:
+    file: ./ome_db_password
 
 volumes:
+  ome_pgdata:
   dspace_pgdata:
   dspace_solr_data:
   dspace_assetstore:
