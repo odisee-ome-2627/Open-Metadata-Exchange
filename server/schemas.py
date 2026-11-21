@@ -151,6 +151,7 @@ class ResourceSummaryData(BaseModel):
     educationLevels: list[str]
     micrositeName: str
     micrositeSlug: str
+    channel: str
     numAlerts: int
     numResources: int
     numSubscribers: int
@@ -161,6 +162,7 @@ class ResourceSummaryData(BaseModel):
 
 class ResourceDetailData(BaseModel):
     id: int
+    channel: str
     title: str
     abstract: str
     source: str
@@ -201,6 +203,45 @@ class ExploreSection(BaseModel):
 class ClientInfo(BaseModel):
     name: str
     slug: str
+
+
+class ResourcePageData(BaseModel):
+    """One card on the resource page (`frontend/src/pages/Asset`).
+
+    The names are the ones the page reads. Fields the network does not have yet
+    keep an empty default, so the page never meets `undefined`.
+    """
+
+    id: int
+    channel: str
+    title: str
+    abstract: str
+    authors: list[str] = []
+    generalSubjects: list[str] = []
+    keywords_names: list[str] = []
+    levels: list[str] = []
+    languages: list[str] = []
+    materialTypes: list[str] = []
+    mediaFormats: list[str] = []
+    collections_titles: list[str] = []
+    createDate: datetime | None = None
+    updateDate: datetime | None = None
+    license_title: str = ""
+    license_image: str = ""
+    micrositeResourceURL: str = ""
+    thumbnail: str = ""
+    rating: int = 0
+    visits: int = 0
+    saves_count: int = 0
+    downloads_count: int = 0
+    history: list[str] = []
+
+
+class ResourcePageResponse(BaseModel):
+    """`GET /api/imls/v2/resources/{channel}/materials/{article}`."""
+
+    clientInfo: ClientInfo
+    resource: ResourcePageData
 
 
 class ResponseCode(BaseModel):

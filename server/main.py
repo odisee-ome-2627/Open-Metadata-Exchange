@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 import httpx2
+import nntp
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -28,6 +29,7 @@ from server.schemas import (
     ExploreSummary,
     MiniMetadata,
     Post,
+    ResourcePageResponse,
     SaveResponse,
 )
 from server.utils import (
@@ -35,6 +37,7 @@ from server.utils import (
     explore_summary,
     get_channel_resources,
     get_channel_summary,
+    post_to_page,
 )
 
 unused = httpx2
@@ -222,6 +225,21 @@ async def get_channel(channel: str, _id: int) -> ChannelResourcesResponse:
 @app.get("/api/imls/v2/resources/")
 async def get_resources(tenant: str) -> ChannelResourcesResponse:
     return get_channel_resources(tenant)
+
+
+@app.get(
+    "/api/imls/v2/resources/{channel}/materials/{article}",
+    responses={404: {"model": ErrorResponse, "description": "No such card"}},
+)
+async def get_resource(channel: str, article: int) -> ResourcePageResponse:
+    """One card for the resource page, with its channel for the save button."""
+    try:
+        post = ome_node.get_post(channel, article)
+    except nntp.NNTPTemporaryError as error:  # 411 no such group, 423 no such article
+        raise HTTPException(
+            404, detail=f"Card {article} not found in {channel}"
+        ) from error
+    return post_to_page(post)
 
 
 app.mount(
