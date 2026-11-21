@@ -3,10 +3,12 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from operator import attrgetter
 
+from pydantic import ValidationError
+
 from server.get_ome_plugins import get_ome_plugins
 from server.ome_node import channel_summary, get_last_n_posts
 from server.ome_node import plugin as site_plugin
-from server.plugins.ome_plugin import OMEPlugin
+from server.plugins.ome_plugin import EducationResource, OMEPlugin
 from server.schemas import (
     BrowseResponse,
     ChannelResourcesResponse,
@@ -22,6 +24,8 @@ from server.schemas import (
     PaginationOptions,
     Post,
     ResourceDetailData,
+    ResourcePageData,
+    ResourcePageResponse,
     ResourceSummaryData,
     ResponseCode,
     ResponseCodeExtended,
@@ -118,6 +122,7 @@ def post_to_summary(post: Post) -> ResourceSummaryData:
         educationLevels=[],
         micrositeName=post.channels[0],
         micrositeSlug=post.channels[0],
+        channel=post.channels[0],
         numAlerts=0,
         numResources=len(post.attachments),
         numSubscribers=0,
@@ -130,6 +135,7 @@ def post_to_summary(post: Post) -> ResourceSummaryData:
 def post_to_details(post: Post) -> ResourceDetailData:
     return ResourceDetailData(
         id=post.id,
+        channel=post.channels[0],
         title=post.subject,
         abstract=post.body,
         source="Course Related Material",
@@ -138,7 +144,7 @@ def post_to_details(post: Post) -> ResourceDetailData:
         thumbnail=None,
         timestamp=post.date,
         updatedDate=post.date,
-        detailURL=f"/api/imls/v2/resources/ome.qubes/materials/{post.id}",
+        detailURL=f"/api/imls/v2/resources/{post.channels[0]}/materials/{post.id}",
         grade_sublevel=["High School"],
         accessibility=[],
         rating=0,
@@ -217,6 +223,7 @@ def get_channel_summary(
             ],
             micrositeName=channel_plugin.site_name,
             micrositeSlug=channel_slug,
+            channel=channel_slug,
             numAlerts=0,
             numResources=100,
             numSubscribers=0,
@@ -309,4 +316,54 @@ def get_channel_resources(
             email=plugin.librarian_contact, isAuthenticated=True, name=""
         ),
         clientInfo=ClientInfo(name=plugin.site_name, slug=tenant_slug),
+    )
+
+
+def card_from_headers(post: Post) -> EducationResource:
+    """What the article itself says, for a post without a readable card."""
+    return EducationResource(title=post.subject, description=post.body or "")
+
+
+def card_of(post: Post) -> EducationResource:
+    """The card in the `metadata.json` attachment, or what the headers give.
+
+    Strict on purpose: a `metadata.json` this version cannot read raises
+    `ValidationError`, so the save route (#229) never stores a half-empty item.
+    """
+    for attachment in post.attachments:
+        if attachment.filename == "metadata.json":
+            return EducationResource.model_validate_json(attachment.data)
+    return card_from_headers(post)
+
+
+def post_to_page(post: Post) -> ResourcePageResponse:
+    """The resource page of one card."""
+    channel = post.channels[0]
+    try:
+        card = card_of(post)
+    except ValidationError:
+        # A card from another node that this version cannot read: still show it
+        print(f"Unreadable metadata.json in {channel}/{post.id}", flush=True)
+        card = card_from_headers(post)
+    plugin_by_slug = {slug: plugin for slug, _description, plugin in get_channels()}
+    channel_plugin = plugin_by_slug.get(channel)
+    return ResourcePageResponse(
+        clientInfo=ClientInfo(
+            name=channel_plugin.site_name if channel_plugin else channel, slug=channel
+        ),
+        resource=ResourcePageData(
+            id=post.id,
+            channel=channel,
+            title=card.title or post.subject,
+            abstract=card.description,
+            authors=card.authors,
+            generalSubjects=card.subject_tags,
+            collections_titles=[channel],
+            # A card without a date would show "Jan 01 1970" on the page
+            createDate=card.creation_date or post.date,
+            updateDate=card.last_modified_date or post.date,
+            license_title=card.spdx_license_expression,
+            micrositeResourceURL=card.source_url,
+            thumbnail=channel_plugin.logo if channel_plugin else "",
+        ),
     )
