@@ -128,6 +128,16 @@ To publish items from this DSpace on your node, set the plugin in your local `co
 "cms_plugin": "server.plugins.dspace.plugin.DSpacePlugin"
 ```
 
-The plugin reads DSpace through OAI-PMH. It takes the endpoint from `DSPACE_OAI_URL`, and
-`bulk_import.py` takes the collection from `DSPACE_COLLECTION_HANDLE`. Both are read when they
-are needed, so a node without them still starts. See `server/plugins/dspace/README.md`.
+The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `config.json`:
+
+```json
+"dspace": {
+    "oai_url": "http://dspace:8080/server/oai/request",
+    "collection_handle": "123456789/2"
+}
+```
+
+`env.j2` turns it into `DSPACE_OAI_URL` and `DSPACE_COLLECTION_HANDLE` for the backend. Inside
+Docker the backend reaches DSpace at `dspace:8080`, not `localhost`. Use the handle that the
+bootstrap printed. The settings are read when they are needed, so a node without a `dspace`
+block still starts. See `server/plugins/dspace/README.md`.
