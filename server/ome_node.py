@@ -69,7 +69,7 @@ def channel_summary(channel_name: str) -> ChannelSummary:
         )
 
 
-def create_post(post: Post) -> bool:
+def create_post(post: Post) -> str | bool:
     with ClientContextManager() as nntp_client:
         message = MIMEMultipart()
         message["Subject"] = post.subject

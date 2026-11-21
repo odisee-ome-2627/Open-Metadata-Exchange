@@ -1,0 +1,20 @@
+{
+  "title": "Introduction to Artificial Intelligence and Machine Learning",
+  "description": "This textbook introduces the fundamental concepts of artificial intelligence and machine learning. Topics include search algorithms, knowledge representation, supervised and unsupervised learning, neural networks, model evaluation, and ethical considerations. Practical examples and case studies help students understand real-world AI applications across multiple industries.",
+  "authors": [
+    "Sarah J. Mitchell",
+    "John Doe"
+  ],
+  "authoring_institution": "Academic Learning Press",
+  "subject_tags": [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Data Science",
+    "Neural Networks"
+  ],
+  "creation_date": "2023-01-01T00:00:00Z",
+  "last_modified_date": "2026-11-20T10:18:48Z",
+  "source_url": "http://localhost:4001/handle/123456789/3",
+  "version_url": "",
+  "spdx_license_expression": "CC-BY-4.0"
+}
