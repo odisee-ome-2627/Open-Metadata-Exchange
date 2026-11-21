@@ -133,11 +133,21 @@ The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `confi
 ```json
 "dspace": {
     "oai_url": "http://dspace:8080/server/oai/request",
-    "collection_handle": "123456789/2"
+    "collection_handle": "123456789/2",
+    "newsgroup": "ome.odisee",
+    "site_name": "Odisee",
+    "logo": "https://example.org/logo.png",
+    "librarian_contact": "librarian@example.org"
 }
 ```
 
-`env.j2` turns it into `DSPACE_OAI_URL` and `DSPACE_COLLECTION_HANDLE` for the backend. Inside
+`env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_COLLECTION_HANDLE`, `DSPACE_NEWSGROUP`,
+`DSPACE_SITE_NAME`, `DSPACE_LOGO` and `DSPACE_LIBRARIAN_CONTACT` for the backend.
+`newsgroup` is required on a node whose `cms_plugin` is the DSpace plugin: the Explore page
+takes the first newsgroup of the node's own plugin. The news server creates this group at
+start-up, so fill in the name only here. Do not add it to `local_newsgroups` as well: that
+list is for the channels of other libraries. `site_name`, `logo` and `librarian_contact` are
+optional; without them the defaults of `OMEPlugin` apply. Inside
 Docker the backend reaches DSpace at `dspace:8080`, not `localhost`. Use the handle that the
 bootstrap printed. The settings are read when they are needed, so a node without a `dspace`
 block still starts. See `server/plugins/dspace/README.md`.

@@ -31,6 +31,14 @@ def to_spdx(licence: str) -> str:
     return OAPEN_LICENSE_TO_SPDX.get(licence.strip().lower(), licence.strip())
 
 
+def dspace_setting(name: str, default: str = "") -> str:
+    """A value from the dspace block in config.json, through env.j2."""
+    return os.getenv(f"DSPACE_{name}") or default
+
+
+NEWSGROUP = dspace_setting("NEWSGROUP")
+
+
 class DSpacePlugin(OMEPlugin):
     """
     Plugin for a DSpace repository (https://dspace.lyrasis.org).
@@ -41,15 +49,14 @@ class DSpacePlugin(OMEPlugin):
 
     mimetypes: tuple[str, ...] = ("application/vnd.dspace.item+json",)
     # newsgroups is a dict but make it immutable for safety reasons. `ruff rule RUF012`
-    # The name comes from #224 (create the DSpace newsgroup on every node).
     newsgroups: dict[str, str] = MappingProxyType(
-        {"ome.odisee": "Metadata from the Odisee DSpace repository"}
+        {NEWSGROUP: "Metadata from a DSpace repository"} if NEWSGROUP else {}
     )
-
-    # TODO(Celinestevens): replace these placeholder values.
-    site_name: str = "OME development repository"
-    librarian_contact: str = "librarian@ome.test"
-    logo: str = "https://www.odisee.be/sites/default/files/public/styles/media_text/public/2024-05/odisee_eng_nachtblauw_rgb_1.jpg?itok=ZAhYv7aG"
+    site_name: str = dspace_setting("SITE_NAME", OMEPlugin.site_name)
+    librarian_contact: str = dspace_setting(
+        "LIBRARIAN_CONTACT", OMEPlugin.librarian_contact
+    )
+    logo: str = dspace_setting("LOGO", OMEPlugin.logo)
 
     def make_metadata_card(self, item: DSpaceItem) -> EducationResource:
         """Translate the dim fields of a DSpace item into an EducationResource."""

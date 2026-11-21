@@ -33,11 +33,19 @@ def test_dspace_settings_come_from_config() -> None:
             "dspace": {
                 "oai_url": "http://dspace:8080/server/oai/request",
                 "collection_handle": "123456789/2",
+                "newsgroup": "ome.odisee",
+                "site_name": "Odisee",
+                "logo": "https://example.org/logo.png?itok=abc",
+                "librarian_contact": "librarian@example.org",
             }
         }
     )
     assert env["DSPACE_OAI_URL"] == "http://dspace:8080/server/oai/request"
     assert env["DSPACE_COLLECTION_HANDLE"] == "123456789/2"
+    assert env["DSPACE_NEWSGROUP"] == "ome.odisee"
+    assert env["DSPACE_SITE_NAME"] == "Odisee"
+    assert env["DSPACE_LOGO"] == "https://example.org/logo.png?itok=abc"
+    assert env["DSPACE_LIBRARIAN_CONTACT"] == "librarian@example.org"
     assert env["CMS_PLUGIN"] == "server.plugins.dspace.plugin.DSpacePlugin"
 
 
@@ -48,4 +56,8 @@ def test_a_node_without_dspace_settings_still_renders(dspace: dict | None) -> No
     env = render(config)
     assert env["DSPACE_OAI_URL"] == ""
     assert env["DSPACE_COLLECTION_HANDLE"] == ""
+    assert env["DSPACE_NEWSGROUP"] == ""
+    assert env["DSPACE_SITE_NAME"] == ""
+    assert env["DSPACE_LOGO"] == ""
+    assert env["DSPACE_LIBRARIAN_CONTACT"] == ""
     assert env["NNTP_USER"] == "someusername"

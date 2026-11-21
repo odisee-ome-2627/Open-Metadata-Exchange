@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from http import HTTPStatus
+from types import MappingProxyType
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +17,9 @@ ITEM_URL = "http://localhost:4001/handle/123456789/3"
 
 class FakeDSpacePlugin(DSpacePlugin):
     """The DSpace plugin, but with a fixed card instead of a call to DSpace."""
+
+    # The real newsgroup comes from DSPACE_NEWSGROUP, which the tests do not set.
+    newsgroups: dict[str, str] = MappingProxyType({"ome.odisee": "Test newsgroup"})
 
     def make_metadata_card_from_url(self, url: str) -> EducationResource:
         assert url == ITEM_URL

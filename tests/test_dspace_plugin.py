@@ -1,17 +1,20 @@
+import importlib
 import xml.etree.ElementTree as ET
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from server import oai_pmh
+from server.plugins.dspace import plugin as dspace_plugin
 from server.plugins.dspace.dspace_models import (
     DimField,
     DSpaceItem,
     parse_dspace_date,
 )
-from server.plugins.dspace.plugin import DSpacePlugin
-from server.plugins.ome_plugin import EducationResource
+from server.plugins.dspace.plugin import DSpacePlugin, dspace_setting
+from server.plugins.ome_plugin import EducationResource, OMEPlugin
 
 DSPACE_DIR = Path(__file__).parent.parent / "server" / "plugins" / "dspace"
 
@@ -198,3 +201,61 @@ def test_card_from_url_needs_a_handle_url(monkeypatch: pytest.MonkeyPatch) -> No
         DSpacePlugin().make_metadata_card_from_url(
             "http://localhost:4001/items/a5f462bd-34f9-4d31-a888-93353c08748d"
         )
+
+
+def test_dspace_setting_reads_the_variable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DSPACE_SITE_NAME", "Odisee")
+    assert dspace_setting("SITE_NAME", "default") == "Odisee"
+
+
+@pytest.mark.parametrize("value", [None, ""])
+def test_dspace_setting_falls_back_to_the_default(
+    monkeypatch: pytest.MonkeyPatch, value: str | None
+) -> None:
+    """No variable, or an empty one from env.j2, gives the default."""
+    if value is None:
+        monkeypatch.delenv("DSPACE_SITE_NAME", raising=False)
+    else:
+        monkeypatch.setenv("DSPACE_SITE_NAME", value)
+    assert dspace_setting("SITE_NAME", "default") == "default"
+    assert dspace_setting("SITE_NAME") == ""
+
+
+@pytest.fixture
+def reload_plugin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[Callable[[], type[DSpacePlugin]]]:
+    """Load plugin.py again after the test sets its variables, and restore it after."""
+    yield lambda: importlib.reload(dspace_plugin).DSpacePlugin
+    for name in ("NEWSGROUP", "SITE_NAME", "LOGO", "LIBRARIAN_CONTACT"):
+        monkeypatch.delenv(f"DSPACE_{name}", raising=False)
+    importlib.reload(dspace_plugin)
+
+
+def test_class_values_come_from_the_dspace_settings(
+    monkeypatch: pytest.MonkeyPatch,
+    reload_plugin: Callable[[], type[DSpacePlugin]],
+) -> None:
+    monkeypatch.setenv("DSPACE_NEWSGROUP", "ome.odisee")
+    monkeypatch.setenv("DSPACE_SITE_NAME", "Odisee")
+    monkeypatch.setenv("DSPACE_LOGO", "https://example.org/logo.png")
+    monkeypatch.setenv("DSPACE_LIBRARIAN_CONTACT", "librarian@example.org")
+    plugin_class = reload_plugin()
+    assert list(plugin_class.newsgroups) == ["ome.odisee"]
+    assert plugin_class.site_name == "Odisee"
+    assert plugin_class.logo == "https://example.org/logo.png"
+    assert plugin_class.librarian_contact == "librarian@example.org"
+
+
+def test_without_dspace_settings_the_defaults_apply(
+    monkeypatch: pytest.MonkeyPatch,
+    reload_plugin: Callable[[], type[DSpacePlugin]],
+) -> None:
+    """A node without a dspace block has no DSpace channel and still starts."""
+    for name in ("NEWSGROUP", "SITE_NAME", "LOGO", "LIBRARIAN_CONTACT"):
+        monkeypatch.setenv(f"DSPACE_{name}", "")
+    plugin_class = reload_plugin()
+    assert dict(plugin_class.newsgroups) == {}
+    assert plugin_class.site_name == OMEPlugin.site_name
+    assert plugin_class.logo == OMEPlugin.logo
+    assert plugin_class.librarian_contact == OMEPlugin.librarian_contact
