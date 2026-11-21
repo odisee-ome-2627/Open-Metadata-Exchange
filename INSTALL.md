@@ -119,3 +119,15 @@ seed. Every item stores the link to its page, and other nodes open it, so items 
 
 New items only show up in OAI-PMH after
 `docker compose --profile dev exec dspace /dspace/bin/dspace oai import`.
+
+### The DSpace plugin
+
+To publish items from this DSpace on your node, set the plugin in your local `config.json`:
+
+```json
+"cms_plugin": "server.plugins.dspace.plugin.DSpacePlugin"
+```
+
+The plugin reads DSpace through OAI-PMH. It takes the endpoint from `DSPACE_OAI_URL`, and
+`bulk_import.py` takes the collection from `DSPACE_COLLECTION_HANDLE`. Both are read when they
+are needed, so a node without them still starts. See `server/plugins/dspace/README.md`.
