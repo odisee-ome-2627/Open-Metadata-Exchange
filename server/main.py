@@ -1,3 +1,6 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -9,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader
 
-from server import ome_node
+from server import db, ome_node
 from server.helpers import MocAPI
 from server.plugins.ome_plugin import OMEPlugin, can_save
 from server.schemas import (
@@ -36,7 +39,25 @@ from server.utils import (
 
 unused = httpx2
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Open the node database at start and close it at stop."""
+    url = db.database_url()
+    if not url:
+        print("No OME_DATABASE_URL: the node runs without its database", flush=True)
+        app.state.db = None
+        yield
+        return
+    await asyncio.to_thread(db.prepare, url)
+    app.state.db = await db.open_pool(url)
+    try:
+        yield
+    finally:
+        await app.state.db.close()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
