@@ -13,6 +13,10 @@ services:
   node-a:
     <<: *nntp-node
     hostname: node-a
+    # The peer's fixed address, also while it is stopped: Docker's DNS forgets a stopped
+    # container, and the host's search domain could then send the name to an outside server.
+    extra_hosts:
+      - "node-b:172.30.0.12"
     environment:
       OME_CONFIG: /run/secrets/node_a_config
     secrets:
@@ -24,6 +28,9 @@ services:
   node-b:
     <<: *nntp-node
     hostname: node-b
+    # See node-a: keep the peer's address while it is stopped.
+    extra_hosts:
+      - "node-a:172.30.0.11"
     environment:
       OME_CONFIG: /run/secrets/node_b_config
     secrets:
