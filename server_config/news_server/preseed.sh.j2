@@ -1,6 +1,13 @@
 #!/usr/bin/bash
 
-{% for group in local_newsgroups %}
+{#- The DSpace channel from dspace.newsgroup comes first, then the extra local_newsgroups. -#}
+{%- set groups = local_newsgroups | default([]) | list %}
+{%- set dspace_group = (dspace | default({})).newsgroup | default("") %}
+{%- if dspace_group and dspace_group not in groups %}
+{%- set groups = [dspace_group] + groups %}
+{%- endif %}
+
+{% for group in groups %}
 ctlinnd newgroup {{group}}
 {% endfor %}
 
