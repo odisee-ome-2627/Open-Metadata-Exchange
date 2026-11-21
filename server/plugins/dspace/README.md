@@ -57,7 +57,8 @@ server/plugins/dspace
 ├── dspace_article.eml
 ├── dspace_item.json
 ├── dspace_models.py
+├── dspace_ome_item.json
 └── plugin.py
 
-1 directory, 7 files
+1 directory, 8 files
 ```
