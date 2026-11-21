@@ -3,6 +3,8 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from operator import attrgetter
 
+from pydantic import ValidationError
+
 from server.get_ome_plugins import get_ome_plugins
 from server.ome_node import channel_summary, get_last_n_posts
 from server.ome_node import plugin as site_plugin
@@ -317,18 +319,32 @@ def get_channel_resources(
     )
 
 
+def card_from_headers(post: Post) -> EducationResource:
+    """What the article itself says, for a post without a readable card."""
+    return EducationResource(title=post.subject, description=post.body or "")
+
+
 def card_of(post: Post) -> EducationResource:
-    """The card in the `metadata.json` attachment, or what the headers give."""
+    """The card in the `metadata.json` attachment, or what the headers give.
+
+    Strict on purpose: a `metadata.json` this version cannot read raises
+    `ValidationError`, so the save route (#229) never stores a half-empty item.
+    """
     for attachment in post.attachments:
         if attachment.filename == "metadata.json":
             return EducationResource.model_validate_json(attachment.data)
-    return EducationResource(title=post.subject, description=post.body or "")
+    return card_from_headers(post)
 
 
 def post_to_page(post: Post) -> ResourcePageResponse:
     """The resource page of one card."""
     channel = post.channels[0]
-    card = card_of(post)
+    try:
+        card = card_of(post)
+    except ValidationError:
+        # A card from another node that this version cannot read: still show it
+        print(f"Unreadable metadata.json in {channel}/{post.id}", flush=True)
+        card = card_from_headers(post)
     plugin_by_slug = {slug: plugin for slug, _description, plugin in get_channels()}
     channel_plugin = plugin_by_slug.get(channel)
     return ResourcePageResponse(

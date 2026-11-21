@@ -6,6 +6,7 @@ from http import HTTPStatus
 import nntp
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from server import ome_node, utils
 from server.main import app
@@ -61,6 +62,28 @@ def test_the_page_reads_the_card_in_metadata_json() -> None:
 def test_a_post_without_a_card_uses_its_subject_and_body() -> None:
     resource = utils.post_to_page(a_post()).resource
     assert (resource.title, resource.abstract) == ("Subject", "Body")
+
+
+@pytest.mark.parametrize(
+    "data",
+    [b"{broken", b'{"title": "T", "authors": "not a list"}'],
+)
+def test_an_unreadable_card_still_shows_the_page(data: bytes) -> None:
+    broken = Attachment(filename="metadata.json", mime_subtype="json", data=data)
+    resource = utils.post_to_page(a_post(broken)).resource
+    assert (resource.title, resource.abstract) == ("Subject", "Body")
+
+
+def test_card_of_stays_strict_for_the_save_route() -> None:
+    broken = Attachment(filename="metadata.json", mime_subtype="json", data=b"{")
+    with pytest.raises(ValidationError):
+        utils.card_of(a_post(broken))
+
+
+def test_a_new_field_in_the_card_is_ignored() -> None:
+    data = b'{"title": "T", "a_field_from_a_newer_node": 1}'
+    newer = Attachment(filename="metadata.json", mime_subtype="json", data=data)
+    assert utils.post_to_page(a_post(newer)).resource.title == "T"
 
 
 def test_a_card_without_a_date_gets_the_date_of_the_post() -> None:
