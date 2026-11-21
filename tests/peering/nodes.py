@@ -30,7 +30,7 @@ def wait_for[T](check: Callable[[], T | None], timeout: float) -> T | None:
 
 
 def _text(output: bytes | str | None) -> str:
-    """Partial output of a timed-out command: TimeoutExpired keeps it as bytes."""
+    """Command output as text: run() and TimeoutExpired give it as bytes."""
     if isinstance(output, bytes):
         return output.decode(errors="replace")
     return output or ""
@@ -53,12 +53,14 @@ class PeeringNodes:
         try:
             result = subprocess.run(  # noqa: S603 - fixed arguments, no shell
                 command,
-                input=input_text,
+                # Bytes, not text: in text mode Windows turns LF into CRLF and
+                # inews rejects the article. Decoded below with _text().
+                input=input_text.encode() if input_text is not None else None,
                 capture_output=True,
-                text=True,
                 check=False,
                 timeout=timeout,
             )
+            result.stdout, result.stderr = _text(result.stdout), _text(result.stderr)
         except subprocess.TimeoutExpired as error:
             # A hanging command counts as a failed attempt, so wait_for keeps
             # waiting and the normal failure message with the logs still shows up.

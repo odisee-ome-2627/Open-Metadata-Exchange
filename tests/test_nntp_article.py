@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -40,9 +41,13 @@ def test_nntp_article_invalid_attachment() -> None:
     Test the nntp_article function with an invalid attachment.
     """
     path = here / "does_not_exist.json"
-    with pytest.raises(FileNotFoundError, match=f"Attachment {path} does not exist."):
+    with pytest.raises(
+        FileNotFoundError, match=re.escape(f"Attachment {path} does not exist.")
+    ):
         nntp_article("Test Article", [path])
 
     path = here / "not_a_json_file.txt"
-    with pytest.raises(ValueError, match=f"Attachment {path} is not a JSON file."):
+    with pytest.raises(
+        ValueError, match=re.escape(f"Attachment {path} is not a JSON file.")
+    ):
         nntp_article("Test Article", [path])
