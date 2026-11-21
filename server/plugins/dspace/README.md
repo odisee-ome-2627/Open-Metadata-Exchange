@@ -48,7 +48,7 @@ DSPACE_OAI_URL=http://localhost:8080/server/oai/request DSPACE_COLLECTION_HANDLE
 
 **NEWSGROUPS:**
 
-{'ome.odisee': 'Metadata from the Odisee DSpace repository'}
+{}
 ```text
 server/plugins/dspace
 ├── README.md
