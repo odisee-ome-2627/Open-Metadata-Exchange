@@ -132,6 +132,7 @@ def from_post(post: NewsgroupPost) -> Post:
 
     return Post(
         id=post.id,
+        message_id=headers.get("Message-ID", ""),
         channels=[post.channel],
         admin_contact=headers.get("From", "missing"),
         subject=headers.get("Subject", "missing"),
