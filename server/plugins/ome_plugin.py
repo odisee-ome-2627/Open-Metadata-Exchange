@@ -46,6 +46,17 @@ class EducationResource(BaseModel):
     spdx_license_expression: str = ""
 
 
+class SavedItem(BaseModel):
+    """An item in the library's own CMS."""
+
+    cms_id: str
+    cms_url: str
+
+
+class CMSUnreachableError(Exception):
+    """The plugin could not reach its CMS. The save route answers 502."""
+
+
 class OMEPlugin:
     """
     This class is a placeholder for the OMEPlugin functionality.
@@ -87,7 +98,22 @@ class OMEPlugin:
 
     # def make_nntp_article(self, file_path: str) -> EducationResource:
 
+    def save_resource(self, resource: EducationResource, ome_id: str) -> SavedItem:
+        """Save a card from the network as an item in this library's CMS.
+
+        `ome_id` is the Message-ID of the original article. Return
+        the CMS ID and URL of the new item. Raise `CMSUnreachableError` when the
+        CMS does not answer.
+        """
+        msg = "save_resource() not implemented in the subclass"
+        raise NotImplementedError(msg)
+
 
 # TODO(anooparyal): need to create a class here called 'Site' so that
 # many different sites can use the same plugin but have different
 # attributes specific to the site.
+
+
+def can_save(plugin: OMEPlugin) -> bool:
+    """False for a plugin that keeps the default save_resource()."""
+    return type(plugin).save_resource is not OMEPlugin.save_resource
