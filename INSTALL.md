@@ -172,17 +172,27 @@ The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `confi
     "newsgroup": "ome.odisee",
     "site_name": "Odisee",
     "logo": "https://example.org/logo.png",
-    "librarian_contact": "librarian@example.org"
+    "librarian_contact": "librarian@example.org",
+    "server_url": "http://dspace:8080/server",
+    "deposit_email": "deposit@ome.test",
+    "deposit_password": "change-me"
 }
 ```
 
 `env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_COLLECTION_HANDLE`, `DSPACE_NEWSGROUP`,
-`DSPACE_SITE_NAME`, `DSPACE_LOGO` and `DSPACE_LIBRARIAN_CONTACT` for the backend.
+`DSPACE_SITE_NAME`, `DSPACE_LOGO`, `DSPACE_LIBRARIAN_CONTACT`, `DSPACE_SERVER_URL`,
+`DSPACE_DEPOSIT_EMAIL` and `DSPACE_DEPOSIT_PASSWORD` for the backend.
 `newsgroup` is required on a node whose `cms_plugin` is the DSpace plugin: the Explore page
 takes the first newsgroup of the node's own plugin. The news server creates this group at
 start-up, so fill in the name only here. Do not add it to `local_newsgroups` as well: that
 list is for the channels of other libraries. `site_name`, `logo` and `librarian_contact` are
 optional; without them the defaults of `OMEPlugin` apply. Inside
 Docker the backend reaches DSpace at `dspace:8080`, not `localhost`. Use the handle that the
-bootstrap printed. The settings are read when they are needed, so a node without a `dspace`
-block still starts. See `server/plugins/dspace/README.md`.
+bootstrap printed. Every setting has a default, so a node without a `dspace` block still
+starts.
+
+`server_url`, `deposit_email` and `deposit_password` are only needed to save cards from
+other libraries into this DSpace (`POST /api/channel/{name}/save`). The plugin deposits
+them through SWORD v2 into the collection of `collection_handle`. Use the deposit account
+that the bootstrap created (`DSPACE_DEPOSIT_EMAIL` and `DSPACE_DEPOSIT_PASSWORD` in
+`.env`), never the admin. See `server/plugins/dspace/README.md`.
