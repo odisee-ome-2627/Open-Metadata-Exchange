@@ -15,16 +15,19 @@ The plugin is composed of at least three code files.
 
 * `plugin.py`: Defines `mimetypes`, `newsgroups`, and a `make_metadata_card()` function that translates a DSpace item into an OME EducationalResource. The SPDX license comes from the license table in `oapen_books/oapen_models.py`. `make_metadata_card_from_url()` reads one item by its handle URL (`.../handle/<prefix>/<id>`), and `summarize()` writes the body of the INN article.
 * `dspace_models.py`: Pydantic models for one DSpace item (the OAI-PMH header and its `dim` fields), generated with `datamodel-codegen` from `dspace_item.json` and extended with helpers to read the fields and the OAI-PMH XML.
+* `save.py`: Saves a card from another library as a new item in the DSpace collection (`save_resource()` on the plugin). It maps the card to Dublin Core terms, checks on the card's `source_url` that the item is not there yet, and deposits it through SWORD v2. The OME Message-ID goes in `dc.source`, so the export can skip items that came from OME.
 * `bulk_import.py`: Utilities to read a whole DSpace collection (`verb=ListRecords&metadataPrefix=dim&set=col_<handle>`, following the resumption token, with `from` to read only what changed) and convert its items into OME EducationalResources.
 
-The OAI-PMH reader itself is generic and lives in `server/oai_pmh.py`, so other repositories that speak OAI-PMH can use it too.
+The OAI-PMH reader and the SWORD v2 writer are generic and live in `server/oai_pmh.py` and `server/sword.py`, so other repositories that speak OAI-PMH or SWORD v2 (EPrints, Dataverse, Hyku) can use them with their own mapping.
 
 ### Settings
 
-The plugin reads its settings from the environment when it needs them, so a node without DSpace still starts.
+The settings come from the `dspace` block in `config.json`, through `env.j2` (see `INSTALL.md`). Every setting has a default, so a node without DSpace still starts.
 
+* `DSPACE_NEWSGROUP`, `DSPACE_SITE_NAME`, `DSPACE_LOGO`, `DSPACE_LIBRARIAN_CONTACT`: read when the plugin is imported, because `server/utils.py` reads them from the class.
 * `DSPACE_OAI_URL`: the OAI-PMH endpoint, for example `http://localhost:8080/server/oai/request`.
-* `DSPACE_COLLECTION_HANDLE`: the collection that `bulk_import.py` reads, for example `123456789/2`.
+* `DSPACE_COLLECTION_HANDLE`: the collection that `bulk_import.py` reads and that `save.py` deposits into, for example `123456789/2`.
+* `DSPACE_SERVER_URL`, `DSPACE_DEPOSIT_EMAIL`, `DSPACE_DEPOSIT_PASSWORD`: where and as whom `save.py` deposits. The deposit account, never the admin.
 
 ### Sample data
 

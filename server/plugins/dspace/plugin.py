@@ -9,7 +9,6 @@
 # ///
 
 import os
-import re
 from types import MappingProxyType
 from urllib.parse import urlparse
 
@@ -19,11 +18,9 @@ from server.plugins.dspace.dspace_models import (
     item_from_oai_record,
     parse_dspace_date,
 )
+from server.plugins.dspace.save import HANDLE_IN_URL, save_to_dspace
 from server.plugins.oapen_books.oapen_models import OAPEN_LICENSE_TO_SPDX
-from server.plugins.ome_plugin import EducationResource, OMEPlugin
-
-# A DSpace handle URL, e.g. http://localhost:4001/handle/123456789/3
-HANDLE_IN_URL = re.compile(r"/handle/(?P<handle>[^/?#]+/[^/?#]+)")
+from server.plugins.ome_plugin import EducationResource, OMEPlugin, SavedItem
 
 
 def to_spdx(licence: str) -> str:
@@ -111,6 +108,14 @@ class DSpacePlugin(OMEPlugin):
     def make_metadata_card_from_json(self, json_payload: str) -> EducationResource:
         """Create an EducationResource from a raw JSON string."""
         return self.make_metadata_card(DSpaceItem.model_validate_json(json_payload))
+
+    def save_resource(self, resource: EducationResource, ome_id: str) -> SavedItem:
+        """Deposit a card from the network as a new DSpace item, through SWORD v2.
+
+        Metadata only: the file stays behind the card's `source_url` (ADR 0011 §10).
+        See `save_to_dspace()` in `save.py` for the settings and the errors.
+        """
+        return save_to_dspace(resource, ome_id)
 
 
 if __name__ == "__main__":
