@@ -189,3 +189,6 @@ cython_debug/
 
 # Course material of the lecturers, never in git (#219)
 seed/local/
+
+# State of server/plugins/dspace/publish_collection.py (#225)
+dspace_published.json
