@@ -29,6 +29,7 @@ import SortIcon from '@mui/icons-material/Sort';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CircularProgress from '@mui/material/CircularProgress';
 import { FilterAlt } from '@mui/icons-material';
+import { SaveToLibraryButton } from 'features/SaveToLibrary';
 
 let PAGE = 1;
 
@@ -428,7 +429,7 @@ export function CollectionDetails() {
                   {new Date(updatedOn).toDateString().substring(4)}
                 </Typography>
               </Stack>
-              <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mt: 2 }}>
                 {!subscribed ? (
                   <Button variant="contained" color="primary" onClick={async () => { await axios.post(`/api/imls/v2/collections/${micrositeSlug}/${id}/subscribe`); setSubscribed(true); setDone(true); }}>
                     Subscribe
@@ -436,6 +437,7 @@ export function CollectionDetails() {
                 ) : (
                   <Button variant="outlined" color="success" startIcon={<CheckCircleIcon />}>Subscribed</Button>
                 )}
+                <SaveToLibraryButton micrositeSlug={micrositeSlug || name} id={id} name={collectionName} />
               </Stack>
             </CardContent>
           </Card>
