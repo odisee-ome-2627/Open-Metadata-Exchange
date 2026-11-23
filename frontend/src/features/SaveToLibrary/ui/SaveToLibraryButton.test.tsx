@@ -190,6 +190,33 @@ describe('SaveToLibraryButton', () => {
     expect(button().getAttribute('aria-disabled')).toBe('false');
   });
 
+  test('card the node cannot read (422): says so and cannot be clicked again', async () => {
+    mockedAxios.post.mockRejectedValue(httpError(responses.cardUnreadable));
+    renderButton();
+
+    save();
+
+    await waitFor(() => expect(status().textContent)
+      .toBe('Your library cannot read this card, so it cannot be saved.'));
+    expect(button().textContent).toBe('Cannot be saved');
+    expect(button().getAttribute('aria-disabled')).toBe('true');
+
+    save();
+    expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+  });
+
+  test('server error (500): a general message, not "could not be reached", and another try', async () => {
+    mockedAxios.post.mockRejectedValue(httpError(responses.serverError));
+    renderButton();
+
+    save();
+
+    await waitFor(() => expect(status().textContent)
+      .toBe('Something went wrong. Nothing was saved.'));
+    expect(button().textContent).toBe('Try again');
+    expect(button().getAttribute('aria-disabled')).toBe('false');
+  });
+
   test('keyboard: stays a focusable button that keeps focus in every state', async () => {
     mockedAxios.post.mockRejectedValue(httpError(responses.notSupported));
     renderButton();

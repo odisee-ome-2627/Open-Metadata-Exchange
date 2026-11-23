@@ -5,7 +5,12 @@ export type SaveResult =
   | { state: 'already'; cmsUrl?: string }
   | { state: 'unsupported' }
   | { state: 'notFound' }
-  | { state: 'failed' };
+  | { state: 'unreadable' }
+  | { state: 'failed' }
+  | { state: 'error' };
+
+// No answer, or the CMS behind the node is down: trying again later can work.
+const RETRY_STATUSES = [502, 503, 504];
 
 /**
  * Saves a card from another node into the librarian's own repository.
@@ -29,9 +34,12 @@ export async function saveToLibrary(micrositeSlug: string, id: number | string):
       return { state: 'unsupported' };
     case 404:
       return { state: 'notFound' };
+    case 422:
+      // The node cannot read this card. Trying again gives the same answer.
+      return { state: 'unreadable' };
     default:
-      // 502 (CMS unreachable), no response at all, or anything unexpected: worth another try.
-      return { state: 'failed' };
+      if (!response || RETRY_STATUSES.includes(response.status)) return { state: 'failed' };
+      return { state: 'error' };
     }
   }
 }

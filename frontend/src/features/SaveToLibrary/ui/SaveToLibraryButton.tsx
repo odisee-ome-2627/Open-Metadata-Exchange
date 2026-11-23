@@ -23,7 +23,9 @@ const LABELS: Record<State, string> = {
   already: 'In my library',
   unsupported: 'Cannot be saved',
   notFound: 'Cannot be saved',
+  unreadable: 'Cannot be saved',
   failed: 'Try again',
+  error: 'Try again',
 };
 
 const MESSAGES: Record<State, string> = {
@@ -33,12 +35,14 @@ const MESSAGES: Record<State, string> = {
   already: 'This card is already in your library.',
   unsupported: 'Your library cannot save cards yet.',
   notFound: 'This card no longer exists, so it cannot be saved.',
+  unreadable: 'Your library cannot read this card, so it cannot be saved.',
   failed: 'Your library could not be reached. Nothing was saved.',
+  error: 'Something went wrong. Nothing was saved.',
 };
 
-const ERROR_STATES: State[] = ['unsupported', 'notFound', 'failed'];
+const ERROR_STATES: State[] = ['unsupported', 'notFound', 'unreadable', 'failed', 'error'];
 // Only these states do something on click. The others keep the button focusable but inert.
-const CLICKABLE_STATES: State[] = ['ready', 'failed'];
+const CLICKABLE_STATES: State[] = ['ready', 'failed', 'error'];
 
 export function SaveToLibraryButton({
   micrositeSlug, id, name, size = 'medium',
@@ -66,7 +70,7 @@ export function SaveToLibraryButton({
       <Button
         type="button"
         size={size}
-        variant={state === 'ready' || state === 'failed' ? 'contained' : 'outlined'}
+        variant={clickable ? 'contained' : 'outlined'}
         color={state === 'saved' || state === 'already' ? 'success' : 'primary'}
         aria-disabled={!clickable}
         aria-label={name ? `${LABELS[state]}: ${name}` : undefined}

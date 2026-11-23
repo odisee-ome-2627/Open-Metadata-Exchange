@@ -18,6 +18,10 @@ module.exports = {
     status: 409,
     body: { detail: { cms_url: 'https://cms.example.org/courses/148252' } },
   },
+  cardUnreadable: {
+    status: 422,
+    body: { detail: 'This card cannot be read by this node' },
+  },
   notSupported: {
     status: 501,
     body: { detail: 'This plugin cannot save cards' },
@@ -25,5 +29,9 @@ module.exports = {
   cmsUnreachable: {
     status: 502,
     body: { detail: 'CMS unreachable' },
+  },
+  serverError: {
+    status: 500,
+    body: { detail: 'Internal Server Error' },
   },
 };
