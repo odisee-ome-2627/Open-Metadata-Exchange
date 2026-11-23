@@ -48,7 +48,7 @@ DSPACE_OAI_URL=http://localhost:8080/server/oai/request DSPACE_COLLECTION_HANDLE
 * items saved from OME: their `dc.source` holds the OME Message-ID (#221);
 * items without `dc.identifier.uri`.
 
-A second run therefore posts only the items that are new since the first one. New items only show up in OAI-PMH after `dspace oai import`, so run that first:
+A second run therefore posts only the items that are new since the first one. When the node refuses an item, the script goes on with the next one and exits with status 1 at the end; the refused item is not remembered, so the next run tries it again. New items only show up in OAI-PMH after `dspace oai import`, so run that first:
 
 ```sh
 docker compose --profile dev exec dspace /dspace/bin/dspace oai import

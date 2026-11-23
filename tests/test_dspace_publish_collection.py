@@ -1,7 +1,9 @@
 """Tests for publishing a DSpace collection: what is posted to the node, and once."""
 
+import json
 from pathlib import Path
 
+import httpx2
 import pytest
 
 from server.plugins.dspace import publish_collection
@@ -90,11 +92,11 @@ def test_second_run_posts_nothing(tmp_path: Path, posted: list[str]) -> None:
         item("1/3"),
     ]
 
-    assert publish_collection.publish_items(collection, state) == 2
+    assert publish_collection.publish_items(collection, state).published == 2
     assert posted == [f"{HANDLE_URL}/1/1", f"{HANDLE_URL}/1/3"]
 
     posted.clear()
-    assert publish_collection.publish_items(collection, state) == 0
+    assert publish_collection.publish_items(collection, state).published == 0
     assert posted == []
 
 
@@ -113,23 +115,88 @@ def test_dry_run_counts_but_posts_and_saves_nothing(
     tmp_path: Path, posted: list[str]
 ) -> None:
     state = tmp_path / "published.json"
-    assert publish_collection.publish_items([item("1/1")], state, dry_run=True) == 1
+    result = publish_collection.publish_items([item("1/1")], state, dry_run=True)
+    assert result.published == 1
     assert posted == []
     assert not state.exists()
 
 
-def test_a_refused_item_is_not_remembered(
+def test_a_refused_item_does_not_block_the_others(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """When the node refuses an item, the next run tries it again."""
+    """A refused item is not remembered, and the items after it are still published."""
     state = tmp_path / "published.json"
+    posted: list[str] = []
 
-    def refuse(_client: object, _api_url: str, item_url: str) -> None:
+    def refuse_one(_client: object, _api_url: str, item_url: str) -> None:
         if item_url.endswith("/1/2"):
             msg = "refused"
             raise RuntimeError(msg)
+        posted.append(item_url)
 
+    monkeypatch.setattr(publish_collection, "publish", refuse_one)
+    result = publish_collection.publish_items(
+        [item("1/1"), item("1/2"), item("1/3")], state
+    )
+    assert result == publish_collection.PublishResult(published=2, failed=["1/2"])
+    assert posted == [f"{HANDLE_URL}/1/1", f"{HANDLE_URL}/1/3"]
+    assert publish_collection.load_published(state) == {"1/1", "1/3"}
+
+
+def test_main_exits_with_1_when_an_item_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refuse(_client: object, _api_url: str, _item_url: str) -> None:
+        msg = "refused"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(publish_collection, "read_items", lambda *_: [item("1/1")])
     monkeypatch.setattr(publish_collection, "publish", refuse)
-    with pytest.raises(RuntimeError, match="refused"):
-        publish_collection.publish_items([item("1/1"), item("1/2")], state)
-    assert publish_collection.load_published(state) == {"1/1"}
+    monkeypatch.setattr(
+        "sys.argv", ["publish_collection", "--state", str(tmp_path / "state.json")]
+    )
+    with pytest.raises(SystemExit) as exit_info:
+        publish_collection.main()
+    assert exit_info.value.code == 1
+
+
+# The real publish(), against a fake node: no running backend needed.
+API_URL = "http://node.test"
+
+
+def fake_node(
+    status: int, answer: object, requests: list[httpx2.Request]
+) -> httpx2.Client:
+    """A client whose transport answers every request like the node would."""
+
+    def handle(request: httpx2.Request) -> httpx2.Response:
+        requests.append(request)
+        return httpx2.Response(status, json=answer)
+
+    return httpx2.Client(transport=httpx2.MockTransport(handle))
+
+
+def test_publish_posts_the_item_url() -> None:
+    requests: list[httpx2.Request] = []
+    with fake_node(200, answer=True, requests=requests) as client:
+        publish_collection.publish(client, API_URL, f"{HANDLE_URL}/1/1")
+    [request] = requests
+    assert request.method == "POST"
+    assert str(request.url) == f"{API_URL}/api/publish_url"
+    assert json.loads(request.content) == {"url": f"{HANDLE_URL}/1/1"}
+
+
+@pytest.mark.parametrize(
+    ("status", "answer", "error"),
+    [
+        pytest.param(
+            500, {"detail": "boom"}, httpx2.HTTPStatusError, id="error-status"
+        ),
+        pytest.param(200, False, RuntimeError, id="answer-not-true"),
+    ],
+)
+def test_publish_raises_when_the_node_refuses(
+    status: int, answer: object, error: type[Exception]
+) -> None:
+    with fake_node(status, answer, []) as client, pytest.raises(error):
+        publish_collection.publish(client, API_URL, f"{HANDLE_URL}/1/1")

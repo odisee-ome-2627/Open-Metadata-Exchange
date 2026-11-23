@@ -20,6 +20,10 @@ Reads the collection with :func:`bulk_import.read_items` and calls
   so these items are not our own material;
 - items without ``dc.identifier.uri``. ``publish_url`` needs that handle URL.
 
+When the node refuses an item, the run goes on with the next one and exits with
+status 1 at the end. The refused item is not remembered, so the next run tries
+it again.
+
 Run ``dspace oai import`` in the DSpace container first, otherwise new items
 are missing from OAI-PMH (ADR 0010).
 """
@@ -27,7 +31,9 @@ are missing from OAI-PMH (ADR 0010).
 import argparse
 import json
 import re
+import sys
 from collections.abc import Iterable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx2
@@ -84,20 +90,29 @@ def publish(client: httpx2.Client, api_url: str, item_url: str) -> None:
         raise RuntimeError(msg)
 
 
+@dataclass
+class PublishResult:
+    """What a run did: how many items it published, and which handles failed."""
+
+    published: int = 0
+    failed: list[str] = field(default_factory=list)
+
+
 def publish_items(
     items: Iterable[DSpaceItem],
     state_file: Path,
     api_url: str = DEFAULT_API_URL,
     *,
     dry_run: bool = False,
-) -> int:
+) -> PublishResult:
     """
-    Publish the new items and return how many were published.
+    Publish the new items. An item the node refuses does not stop the others.
 
-    With *dry_run*, only print them and return how many would be published.
+    With *dry_run*, only print the items: ``published`` then counts how many
+    would be published.
     """
     published = load_published(state_file)
-    count = 0
+    result = PublishResult()
     with httpx2.Client(timeout=60) as client:
         for item in items:
             url = item.get_metadata_value("dc.identifier.uri")
@@ -106,15 +121,21 @@ def publish_items(
                 continue
             if dry_run:
                 print(f"would    {item.handle}: {url}")
-                count += 1
+                result.published += 1
                 continue
-            publish(client, api_url, url)
+            try:
+                publish(client, api_url, url)
+            except (httpx2.HTTPError, RuntimeError) as error:
+                # Go on: one item that keeps failing must not block the items after it.
+                print(f"FAILED   {item.handle}: {error}")
+                result.failed.append(item.handle)
+                continue
             published.add(item.handle)
             # Save after every item, so a second run after a crash does not post twice.
             save_published(state_file, published)
-            count += 1
+            result.published += 1
             print(f"publish  {item.handle}: {url}")
-    return count
+    return result
 
 
 def main() -> None:
@@ -140,11 +161,16 @@ def main() -> None:
     args = parser.parse_args()
 
     items = read_items(args.oai_url, args.collection)
-    count = publish_items(items, args.state, args.api_url, dry_run=args.dry_run)
+    result = publish_items(items, args.state, args.api_url, dry_run=args.dry_run)
     if args.dry_run:
-        print(f"{count} item(s) would be published (dry run: nothing posted)")
-    else:
-        print(f"{count} item(s) published")
+        print(
+            f"{result.published} item(s) would be published (dry run: nothing posted)"
+        )
+        return
+    print(f"{result.published} item(s) published")
+    if result.failed:
+        print(f"{len(result.failed)} item(s) failed: {', '.join(result.failed)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
