@@ -32,6 +32,7 @@ def test_dspace_settings_come_from_config() -> None:
         | {
             "dspace": {
                 "oai_url": "http://dspace:8080/server/oai/request",
+                "handle_prefix": "123456789",
                 "collection_handle": "123456789/2",
                 "newsgroup": "ome.odisee",
                 "site_name": "Odisee",
@@ -41,6 +42,7 @@ def test_dspace_settings_come_from_config() -> None:
         }
     )
     assert env["DSPACE_OAI_URL"] == "http://dspace:8080/server/oai/request"
+    assert env["DSPACE_HANDLE_PREFIX"] == "123456789"
     assert env["DSPACE_COLLECTION_HANDLE"] == "123456789/2"
     assert env["DSPACE_NEWSGROUP"] == "ome.odisee"
     assert env["DSPACE_SITE_NAME"] == "Odisee"
@@ -55,6 +57,7 @@ def test_a_node_without_dspace_settings_still_renders(dspace: dict | None) -> No
     config = CONFIG if dspace is None else CONFIG | {"dspace": dspace}
     env = render(config)
     assert env["DSPACE_OAI_URL"] == ""
+    assert env["DSPACE_HANDLE_PREFIX"] == ""
     assert env["DSPACE_COLLECTION_HANDLE"] == ""
     assert env["DSPACE_NEWSGROUP"] == ""
     assert env["DSPACE_SITE_NAME"] == ""

@@ -1,7 +1,8 @@
+import asyncio
 from datetime import UTC, datetime
 
 import httpx2
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from server import ome_node
 from server.helpers import MocAPI
+from server.plugins.ome_plugin import ItemNotFoundError, NotAnItemLinkError
 from server.schemas import (
     Attachment,
     BrowseResponse,
@@ -91,7 +93,13 @@ async def get_channel_cards(
 @app.post("/api/publish_url")
 async def create_post(meta: MiniMetadata) -> bool:
     plugin = ome_node.plugin
-    metadata = plugin.make_metadata_card_from_url(meta.url)
+    # Both calls block (HTTP to the CMS, NNTP to INN): keep them off the event loop.
+    try:
+        metadata = await asyncio.to_thread(plugin.make_metadata_card_from_url, meta.url)
+    except ItemNotFoundError as error:
+        raise HTTPException(404, detail=str(error)) from error
+    except NotAnItemLinkError as error:
+        raise HTTPException(400, detail=str(error)) from error
     # TODO(anooparyal): create a more generic version of the metadata and add that
     # to the list of attachments
     post = Post(
@@ -109,7 +117,7 @@ async def create_post(meta: MiniMetadata) -> bool:
         ],  # add the other generic metadata here
         date=datetime.now(tz=UTC),
     )
-    sent = ome_node.create_post(post)
+    sent = await asyncio.to_thread(ome_node.create_post, post)
     print(f"Sent: {sent}")
     # pynntp returns the Message-ID (or True); a failed post raises instead.
     return bool(sent)

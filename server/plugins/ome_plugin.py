@@ -46,6 +46,14 @@ class EducationResource(BaseModel):
     spdx_license_expression: str = ""
 
 
+class NotAnItemLinkError(ValueError):
+    """make_metadata_card_from_url got a link that is not an item of this CMS (400)."""
+
+
+class ItemNotFoundError(LookupError):
+    """make_metadata_card_from_url got a link to an item the CMS does not know (404)."""
+
+
 class OMEPlugin:
     """
     This class is a placeholder for the OMEPlugin functionality.

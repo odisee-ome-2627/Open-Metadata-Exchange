@@ -134,3 +134,28 @@ def test_get_record_unknown_identifier(repo: FakeRepository) -> None:
     with pytest.raises(oai_pmh.OAIPMHError) as raised:
         oai_pmh.get_record(BASE_URL, "oai:x:404", "dim")
     assert raised.value.code == "idDoesNotExist"
+
+
+IDENTIFY = b"""<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"><Identify>
+<repositoryName>DSpace</repositoryName>
+<description><oai-identifier xmlns="http://www.openarchives.org/OAI/2.0/oai-identifier">
+<scheme>oai</scheme><repositoryIdentifier>dspace.example.org</repositoryIdentifier>
+</oai-identifier></description>
+</Identify></OAI-PMH>"""
+
+
+def test_repository_identifier_comes_from_identify(repo: FakeRepository) -> None:
+    repo.answers = [IDENTIFY]
+    assert oai_pmh.repository_identifier(BASE_URL) == "dspace.example.org"
+    assert repo.requests == [{"verb": "Identify"}]
+
+
+def test_repository_identifier_must_be_announced(repo: FakeRepository) -> None:
+    repo.answers = [
+        (
+            b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"><Identify>'
+            b"<repositoryName>DSpace</repositoryName></Identify></OAI-PMH>"
+        )
+    ]
+    with pytest.raises(oai_pmh.OAIPMHError, match="repositoryIdentifier"):
+        oai_pmh.repository_identifier(BASE_URL)

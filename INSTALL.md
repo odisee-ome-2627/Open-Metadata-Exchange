@@ -133,16 +133,20 @@ The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `confi
 ```json
 "dspace": {
     "oai_url": "http://dspace:8080/server/oai/request",
+    "handle_prefix": "123456789",
     "collection_handle": "123456789/2",
-    "newsgroup": "ome.odisee",
-    "site_name": "Odisee",
+    "newsgroup": "ome.example",
+    "site_name": "Example Library",
     "logo": "https://example.org/logo.png",
     "librarian_contact": "librarian@example.org"
 }
 ```
 
-`env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_COLLECTION_HANDLE`, `DSPACE_NEWSGROUP`,
-`DSPACE_SITE_NAME`, `DSPACE_LOGO` and `DSPACE_LIBRARIAN_CONTACT` for the backend.
+`env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_HANDLE_PREFIX`, `DSPACE_COLLECTION_HANDLE`,
+`DSPACE_NEWSGROUP`, `DSPACE_SITE_NAME`, `DSPACE_LOGO` and `DSPACE_LIBRARIAN_CONTACT` for the
+backend. `newsgroup`, `site_name`, `logo` and `librarian_contact` are your library's own:
+the values above are placeholders. `handle_prefix` is your DSpace's handle prefix; it is
+optional and only needed to publish `hdl.handle.net` links.
 `newsgroup` is required on a node whose `cms_plugin` is the DSpace plugin: the Explore page
 takes the first newsgroup of the node's own plugin. The news server creates this group at
 start-up, so fill in the name only here. Do not add it to `local_newsgroups` as well: that

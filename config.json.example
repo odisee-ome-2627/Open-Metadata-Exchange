@@ -23,9 +23,10 @@
 
     "dspace": {
 	"oai_url": "http://dspace:8080/server/oai/request",
+	"handle_prefix": "123456789",
 	"collection_handle": "123456789/2",
-	"newsgroup": "ome.odisee",
-	"site_name": "Odisee",
+	"newsgroup": "ome.example",
+	"site_name": "Example Library",
 	"logo": "https://example.org/logo.png",
 	"librarian_contact": "librarian@example.org"
     }
