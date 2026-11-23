@@ -39,25 +39,30 @@ to restart the containers, not rebuild them. The contents of the file should loo
         "username": "debug_username",
         "password": "debug_password"
     },
+    "local_newsgroups": [
+        "ome.odisee"
+    ],
     "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin"
 }
 ```
 
-| **Variable**               | **Value type**                               | **Comment**                                                            |
-|----------------------------|----------------------------------------------|------------------------------------------------------------------------|
-| organization               | Name of your organization                    |                                                                        |
-| hostname                   | publicly resolvable hostname                 |                                                                        |
-| peers                      | List of peers                                | At least one, preferably two                                           |
-| peers[i].name              | Org name of the peer                         |                                                                        |
-| peers[i].dns\_name         | hostname of the peer                         |                                                                        |
-| peers[i].incoming\_ip      | IP address.[^1]                              | The IP address of the peer you want to allow to connect.               |
-| nntp\_user                 |                                              | The username/password that the FastAPI backend uses to connect to NNTP |
-| nntp\_user.username        | username                                     |                                                                        |
-| nntp\_user.password        | password                                     |                                                                        |
-| nntp\_debug\_user          |                                              | you can use this with a NNTP reader to access the NNTP directly        |
-| nntp\_debug\_user.username | debugging username                           |                                                                        |
-| nntp\_debug\_user.password | debugging password                           |                                                                        |
-| cms_plugin                 | python classpath for the plugin for your CMS | e.g. server.plugins.qubes.plugin.QubesPlugin                           |
+| **Variable**                  | **Value type**                  | **Comment**                                                                  |
+|-------------------------------|---------------------------------|------------------------------------------------------------------------------|
+| `organization`                | Name of your organization       |                                                                              |
+| `hostname`                    | Publicly resolvable hostname    |                                                                              |
+| `peers`                       | List of peers                   | At least one, preferably two                                                 |
+| `peers[i].name`               | Org name of the peer            |                                                                              |
+| `peers[i].dns_name`           | Hostname of the peer            |                                                                              |
+| `peers[i].incoming_ip`        | IP address[^1]                  | The IP address of the peer you want to allow to connect.                     |
+| `local_newsgroups`            | List of strings                 | Newsgroups to create locally when the NNTP server starts. For example, `["ome.odisee"]`. |
+| `dspace.newsgroup`            | Newsgroup name                  | Optional. The channel of the DSpace plugin (#222). Also created when the NNTP server starts. |
+| `nntp_user`                   |                                 | The username/password that the FastAPI backend uses to connect to NNTP.      |
+| `nntp_user.username`          | Username                        |                                                                              |
+| `nntp_user.password`          | Password                        |                                                                              |
+| `nntp_debug_user`             |                                 | You can use this with an NNTP reader to access the NNTP directly.            |
+| `nntp_debug_user.username`    | Debugging username              |                                                                              |
+| `nntp_debug_user.password`    | Debugging password              |                                                                              |
+| `cms_plugin`                  | Python classpath of CMS plugin  | E.g. `server.plugins.qubes.plugin.QubesPlugin`.                              |
 
 [^1]: The IP address that is seen inside your Docker container might be NATted. e.g., 172.21.0.1, the gateway of the docker network.
 

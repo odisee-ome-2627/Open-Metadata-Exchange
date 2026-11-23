@@ -20,5 +20,9 @@
 	"password": "test-only-a"
     },
 
-    "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin"
+    "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin",
+
+    "local_newsgroups": [
+	"ome.test"
+    ]
 }
