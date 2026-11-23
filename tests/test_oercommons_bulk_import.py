@@ -8,7 +8,7 @@ OERCOMMONS_DIR = Path(__file__).parent.parent / "server" / "plugins" / "oercommo
 
 def _load_hit_dict() -> dict:
     """Load the sample oercommons.json fixture as a raw hit dict (full Model format)."""
-    return json.loads((OERCOMMONS_DIR / "oercommons.json").read_text())
+    return json.loads((OERCOMMONS_DIR / "oercommons.json").read_text(encoding="utf-8"))
 
 
 def test_bulk_translate_single_item() -> None:

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --env port=4000",
-    "start:dev:server": "npx json-server --watch db.json",
+    "start:dev:server": "npx json-server --watch db.json --middlewares ./config/mock/saveToLibrary.js",
     "build:prod": "NODE_OPTIONS=--max-old-space-size=4096 webpack --env mode=production",
     "build:prod-ark": "NODE_OPTIONS=--max-old-space-size=4096 webpack --config webpack.ark.config.ts --env mode=production",
     "build:dev": "webpack --env mode=development",
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.13",
     "@babel/preset-env": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
     "@babel/preset-typescript": "^7.29.7",
     "@stylistic/stylelint-plugin": "^5.3.1",
     "@svgr/webpack": "^8.1.0",
@@ -53,7 +54,6 @@
     "jest-environment-jsdom": "^30.5.2",
     "json-server": "^0.17.4",
     "mini-css-extract-plugin": "^2.10.2",
-    "query-string": "^7.1.1",
     "sass": "^1.108.1",
     "sass-loader": "^17.1.0",
     "style-loader": "^4.0.0",
@@ -85,6 +85,8 @@
     "ckeditor4-react": "^5.2.1",
     "grapesjs": "^0.22.16",
     "html-react-parser": "^6.1.9",
+    "qs": "^6.17.1",
+    "query-string": "^9.5.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-dropdown-select": "^5.0.6",
