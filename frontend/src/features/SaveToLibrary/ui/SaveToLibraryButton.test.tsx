@@ -217,6 +217,15 @@ describe('SaveToLibraryButton', () => {
     expect(button().getAttribute('aria-disabled')).toBe('false');
   });
 
+  test('an id that is not a whole number: no request, and the card cannot be saved', async () => {
+    render(<SaveToLibraryButton micrositeSlug="ome.eric" id="abc" />);
+
+    save();
+
+    await waitFor(() => expect(button().textContent).toBe('Cannot be saved'));
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+  });
+
   test('keyboard: stays a focusable button that keeps focus in every state', async () => {
     mockedAxios.post.mockRejectedValue(httpError(responses.notSupported));
     renderButton();
