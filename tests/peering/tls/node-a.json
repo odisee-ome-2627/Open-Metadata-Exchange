@@ -1,0 +1,25 @@
+{
+    "organization": "TLS peering test A",
+    "hostname": "node-a",
+    "innfeed": {
+        "initial_reconnect_time": 2,
+        "max_reconnect_time": 10
+    },
+    "peers": [
+        {
+            "name": "node-b",
+            "dns_name": "tls-a",
+            "port": 11901,
+            "incoming_ip": "172.31.0.21"
+        }
+    ],
+    "nntp_user": {
+        "username": "ome",
+        "password": "test-only-a"
+    },
+    "nntp_debug_user": {
+        "username": "debugreader",
+        "password": "test-only-a"
+    },
+    "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin"
+}

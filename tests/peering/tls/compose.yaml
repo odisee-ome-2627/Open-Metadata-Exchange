@@ -1,0 +1,128 @@
+# Two INN nodes that peer over mutual TLS (stunnel sidecars), for testing only.
+# Run from this folder: docker compose up -d --build
+#
+#   node-a --plain--> tls-a ==TLS (mutual)==> tls-b --plain--> node-b
+#
+# innfeed of a node connects to its own sidecar (tls-a:11901). The sidecar forwards
+# the traffic over TLS to the sidecar of the peer, which hands it to INN on port 119.
+# INN therefore sees the address of its own sidecar as the peer (see node-*.json).
+
+name: ome-peering-tls-test
+
+x-nntp-node: &nntp-node
+  build:
+    context: ../../..
+    dockerfile: Dockerfile-nntp
+  image: ome-nntp:peering-test
+  stop_grace_period: 30s  # innd needs a few seconds to stop cleanly
+
+x-sidecar: &sidecar
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: ome-stunnel:peering-test
+
+services:
+  # Writes the self-signed certificates to the shared volume, then exits.
+  certgen:
+    <<: *sidecar
+    entrypoint: ["sh", "/gen-certs.sh", "/certs"]
+    command: []
+    volumes:
+      - certs:/certs
+      - ./gen-certs.sh:/gen-certs.sh:ro
+    restart: "no"
+    networks:
+      - peering
+
+  node-a:
+    <<: *nntp-node
+    hostname: node-a
+    environment:
+      OME_CONFIG: /run/secrets/node_a_config
+    secrets:
+      - node_a_config
+    networks:
+      peering:
+        ipv4_address: 172.31.0.11
+
+  node-b:
+    <<: *nntp-node
+    hostname: node-b
+    environment:
+      OME_CONFIG: /run/secrets/node_b_config
+    secrets:
+      - node_b_config
+    networks:
+      peering:
+        ipv4_address: 172.31.0.12
+
+  tls-a:
+    <<: *sidecar
+    hostname: tls-a
+    depends_on:
+      certgen:
+        condition: service_completed_successfully
+    volumes:
+      - certs:/certs:ro
+      - ./stunnel-a.conf:/etc/stunnel/stunnel.conf:ro
+    networks:
+      peering:
+        ipv4_address: 172.31.0.21
+
+  tls-b:
+    <<: *sidecar
+    hostname: tls-b
+    depends_on:
+      certgen:
+        condition: service_completed_successfully
+    volumes:
+      - certs:/certs:ro
+      - ./stunnel-b.conf:/etc/stunnel/stunnel.conf:ro
+    networks:
+      peering:
+        ipv4_address: 172.31.0.22
+
+  # A third party in the same network, with every certificate at hand: the test uses
+  # it to try connections that must be refused.
+  intruder:
+    <<: *sidecar
+    hostname: intruder
+    entrypoint: ["sleep", "infinity"]
+    command: []
+    depends_on:
+      certgen:
+        condition: service_completed_successfully
+    volumes:
+      - certs:/certs:ro
+    networks:
+      peering:
+        ipv4_address: 172.31.0.31
+
+  # Looks at the network traffic of tls-a: the plain leg (innfeed to sidecar) and the
+  # TLS leg (sidecar to sidecar). It shares the network of tls-a.
+  sniffer:
+    <<: *sidecar
+    entrypoint: ["sleep", "infinity"]
+    command: []
+    network_mode: "service:tls-a"
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    depends_on:
+      - tls-a
+
+volumes:
+  certs:
+
+secrets:
+  node_a_config:
+    file: ./node-a.json
+  node_b_config:
+    file: ./node-b.json
+
+networks:
+  peering:
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
