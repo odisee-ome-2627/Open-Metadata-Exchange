@@ -12,10 +12,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader
+from pydantic import ValidationError
 
 from server import db, ome_node
 from server.helpers import MocAPI
-from server.plugins.ome_plugin import OMEPlugin, can_save
+from server.plugins.ome_plugin import CMSUnreachableError, OMEPlugin, can_save
 from server.schemas import (
     AlreadySavedResponse,
     Attachment,
@@ -34,6 +35,7 @@ from server.schemas import (
 )
 from server.utils import (
     browse_results,
+    card_of,
     explore_summary,
     get_channel_resources,
     get_channel_summary,
@@ -172,6 +174,17 @@ SAVE_RESPONSES = {
         "description": "Already saved, links to the existing item (from #228)",
         "content": {"application/json": {"example": {"detail": SAVED}}},
     },
+    422: {
+        "description": (
+            "The body has no card number, or this node cannot read the card's"
+            " metadata.json"
+        ),
+        "content": {
+            "application/json": {
+                "example": {"detail": "This card cannot be read by this node"}
+            }
+        },
+    },
     501: {
         "model": ErrorResponse,
         "description": "The plugin of this node cannot save",
@@ -195,11 +208,31 @@ async def save_card(
     card: CardRef,
     plugin: Annotated[OMEPlugin, Depends(current_plugin)],
 ) -> SaveResponse:
-    """Save a card from the network into this library's CMS (ADR 0011 §3)."""
+    """Save a card from the network into this library's CMS.
+
+    The NNTP client and the plugin are synchronous, so both run in a thread:
+    saving may take seconds, and the event loop keeps serving other requests.
+    No mapping yet: a second save makes a second item, the 409 comes with #228.
+    """
     if not can_save(plugin):
         raise HTTPException(501, detail="This plugin cannot save cards")
-    # Fetching the card and calling the plugin comes with #229
-    raise HTTPException(501, detail=f"Saving {name}/{card.id} is not built yet")
+    try:
+        post = await asyncio.to_thread(ome_node.get_post, name, card.id)
+    except nntp.NNTPTemporaryError as error:  # 411 no such group, 423 no such article
+        raise HTTPException(
+            404, detail=f"Card {card.id} not found in {name}"
+        ) from error
+    try:
+        card = card_of(post)
+    except ValidationError as error:
+        raise HTTPException(
+            422, detail="This card cannot be read by this node"
+        ) from error
+    try:
+        saved = await asyncio.to_thread(plugin.save_resource, card, post.message_id)
+    except CMSUnreachableError as error:
+        raise HTTPException(502, detail="The CMS is unreachable") from error
+    return SaveResponse(**saved.model_dump())
 
 
 @app.get("/api/imls/v2/collections/browse/")

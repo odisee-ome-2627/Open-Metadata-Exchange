@@ -97,6 +97,7 @@ class Attachment(BaseModel):
 
 class Post(BaseModel):
     id: int | None
+    message_id: str = ""
     channels: list[str]
     admin_contact: str
     subject: str
