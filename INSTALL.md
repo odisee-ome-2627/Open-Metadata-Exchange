@@ -9,6 +9,8 @@ You will need the following:
    1. IP address reachable from the outside by the peer.
    1. Port 119 (and 563) is unblocked for the peer.
    1. Port 119 on the host forwarded to port 1119, where Docker is listening.
+   1. Only your peers can reach that port. Docker publishes it past UFW and firewalld:
+      see [FIREWALL.md](FIREWALL.md).
 
 ## Peering Configuration
 
@@ -37,25 +39,30 @@ to restart the containers, not rebuild them. The contents of the file should loo
         "username": "debug_username",
         "password": "debug_password"
     },
+    "local_newsgroups": [
+        "ome.odisee"
+    ],
     "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin"
 }
 ```
 
-| **Variable**               | **Value type**                               | **Comment**                                                            |
-|----------------------------|----------------------------------------------|------------------------------------------------------------------------|
-| organization               | Name of your organization                    |                                                                        |
-| hostname                   | publicly resolvable hostname                 |                                                                        |
-| peers                      | List of peers                                | At least one, preferably two                                           |
-| peers[i].name              | Org name of the peer                         |                                                                        |
-| peers[i].dns\_name         | hostname of the peer                         |                                                                        |
-| peers[i].incoming\_ip      | IP address.[^1]                              | The IP address of the peer you want to allow to connect.               |
-| nntp\_user                 |                                              | The username/password that the FastAPI backend uses to connect to NNTP |
-| nntp\_user.username        | username                                     |                                                                        |
-| nntp\_user.password        | password                                     |                                                                        |
-| nntp\_debug\_user          |                                              | you can use this with a NNTP reader to access the NNTP directly        |
-| nntp\_debug\_user.username | debugging username                           |                                                                        |
-| nntp\_debug\_user.password | debugging password                           |                                                                        |
-| cms_plugin                 | python classpath for the plugin for your CMS | e.g. server.plugins.qubes.plugin.QubesPlugin                           |
+| **Variable**                  | **Value type**                  | **Comment**                                                                  |
+|-------------------------------|---------------------------------|------------------------------------------------------------------------------|
+| `organization`                | Name of your organization       |                                                                              |
+| `hostname`                    | Publicly resolvable hostname    |                                                                              |
+| `peers`                       | List of peers                   | At least one, preferably two                                                 |
+| `peers[i].name`               | Org name of the peer            |                                                                              |
+| `peers[i].dns_name`           | Hostname of the peer            |                                                                              |
+| `peers[i].incoming_ip`        | IP address[^1]                  | The IP address of the peer you want to allow to connect.                     |
+| `local_newsgroups`            | List of strings                 | Newsgroups to create locally when the NNTP server starts. For example, `["ome.odisee"]`. |
+| `dspace.newsgroup`            | Newsgroup name                  | Optional. The channel of the DSpace plugin (#222). Also created when the NNTP server starts. |
+| `nntp_user`                   |                                 | The username/password that the FastAPI backend uses to connect to NNTP.      |
+| `nntp_user.username`          | Username                        |                                                                              |
+| `nntp_user.password`          | Password                        |                                                                              |
+| `nntp_debug_user`             |                                 | You can use this with an NNTP reader to access the NNTP directly.            |
+| `nntp_debug_user.username`    | Debugging username              |                                                                              |
+| `nntp_debug_user.password`    | Debugging password              |                                                                              |
+| `cms_plugin`                  | Python classpath of CMS plugin  | E.g. `server.plugins.qubes.plugin.QubesPlugin`.                              |
 
 [^1]: The IP address that is seen inside your Docker container might be NATted. e.g., 172.21.0.1, the gateway of the docker network.
 
@@ -168,9 +175,10 @@ The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `confi
 ```json
 "dspace": {
     "oai_url": "http://dspace:8080/server/oai/request",
+    "handle_prefix": "123456789",
     "collection_handle": "123456789/2",
-    "newsgroup": "ome.odisee",
-    "site_name": "Odisee",
+    "newsgroup": "ome.example",
+    "site_name": "Example Library",
     "logo": "https://example.org/logo.png",
     "librarian_contact": "librarian@example.org",
     "server_url": "http://dspace:8080/server",
@@ -179,9 +187,12 @@ The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `confi
 }
 ```
 
-`env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_COLLECTION_HANDLE`, `DSPACE_NEWSGROUP`,
-`DSPACE_SITE_NAME`, `DSPACE_LOGO`, `DSPACE_LIBRARIAN_CONTACT`, `DSPACE_SERVER_URL`,
-`DSPACE_DEPOSIT_EMAIL` and `DSPACE_DEPOSIT_PASSWORD` for the backend.
+`env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_HANDLE_PREFIX`, `DSPACE_COLLECTION_HANDLE`,
+`DSPACE_NEWSGROUP`, `DSPACE_SITE_NAME`, `DSPACE_LOGO`, `DSPACE_LIBRARIAN_CONTACT`, `DSPACE_SERVER_URL`,
+`DSPACE_DEPOSIT_EMAIL` and `DSPACE_DEPOSIT_PASSWORD` for the
+backend. `newsgroup`, `site_name`, `logo` and `librarian_contact` are your library's own:
+the values above are placeholders. `handle_prefix` is your DSpace's handle prefix; it is
+optional and only needed to publish `hdl.handle.net` links.
 `newsgroup` is required on a node whose `cms_plugin` is the DSpace plugin: the Explore page
 takes the first newsgroup of the node's own plugin. The news server creates this group at
 start-up, so fill in the name only here. Do not add it to `local_newsgroups` as well: that

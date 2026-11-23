@@ -9,7 +9,11 @@ from nntp import NNTPTemporaryError
 from server import ome_node
 from server.main import app
 from server.plugins.dspace.plugin import DSpacePlugin
-from server.plugins.ome_plugin import EducationResource
+from server.plugins.ome_plugin import (
+    EducationResource,
+    ItemNotFoundError,
+    NotAnItemLinkError,
+)
 from server.schemas import Post
 
 ITEM_URL = "http://localhost:4001/handle/123456789/3"
@@ -80,3 +84,29 @@ def test_publish_url_fails_when_inn_refuses_the_post(inn_answers: Callable) -> N
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert response.text != "true"
     assert len(posts) == 1  # it did try to post
+
+
+@pytest.mark.parametrize(
+    ("error", "status"),
+    [
+        (NotAnItemLinkError("This link is not an item of the Odisee DSpace"), 400),
+        (ItemNotFoundError("This item is not in OAI-PMH yet."), 404),
+    ],
+)
+def test_publish_url_explains_a_bad_link(
+    inn_answers: Callable,
+    monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
+    status: int,
+) -> None:
+    """A wrong or unknown link is the librarian's to fix: 400/404 with the reason."""
+
+    def refuse(_url: str) -> EducationResource:
+        raise error
+
+    posts = inn_answers(lambda _post: True)
+    monkeypatch.setattr(ome_node.plugin, "make_metadata_card_from_url", refuse)
+    response = TestClient(app).post("/api/publish_url", json={"url": ITEM_URL})
+    assert response.status_code == status
+    assert response.json() == {"detail": str(error)}
+    assert posts == []  # nothing reaches INN

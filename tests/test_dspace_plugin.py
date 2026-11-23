@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
+import httpx2
 import pytest
 
 from server import oai_pmh
@@ -14,7 +15,12 @@ from server.plugins.dspace.dspace_models import (
     parse_dspace_date,
 )
 from server.plugins.dspace.plugin import DSpacePlugin, dspace_setting
-from server.plugins.ome_plugin import EducationResource, OMEPlugin
+from server.plugins.ome_plugin import (
+    EducationResource,
+    ItemNotFoundError,
+    NotAnItemLinkError,
+    OMEPlugin,
+)
 
 DSPACE_DIR = Path(__file__).parent.parent / "server" / "plugins" / "dspace"
 
@@ -155,34 +161,171 @@ def test_summarize_with_only_a_title() -> None:
     )
 
 
-def test_card_from_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The handle in the URL becomes the OAI identifier, and the record a card."""
-    requests = []
+OAI_URL = "http://dspace:8080/server/oai/request"
+UI_URL = "http://localhost:4001"
+ITEM_UUID = "a5f462bd-34f9-4d31-a888-93353c08748d"
 
-    def fake_get_record(
-        base_url: str, identifier: str, metadata_prefix: str
+
+class FakeDSpace:
+    """Stands in for OAI-PMH and the REST API, and remembers what was asked."""
+
+    def __init__(self) -> None:
+        self.identifiers: list[str] = []
+        self.identify_calls = 0
+        self.rest_urls: list[str] = []
+        self.root_calls = 0
+        # uuid -> handle in the REST API; a missing uuid answers 404.
+        self.items: dict[str, str | None] = {ITEM_UUID: "123456789/3"}
+        self.in_oai = True
+
+    def repository_identifier(self, base_url: str) -> str:
+        assert base_url == OAI_URL
+        self.identify_calls += 1
+        return "dspace.odisee.test"
+
+    def get_record(
+        self, base_url: str, identifier: str, metadata_prefix: str
     ) -> ET.Element:
-        requests.append((base_url, identifier, metadata_prefix))
+        assert (base_url, metadata_prefix) == (OAI_URL, "dim")
+        self.identifiers.append(identifier)
+        if not self.in_oai:
+            raise oai_pmh.OAIPMHError(oai_pmh.ID_DOES_NOT_EXIST, "no such record")
         root = ET.fromstring(GET_RECORD_XML)  # noqa: S314 - fixed test XML
         return root.find(".//oai:record", oai_pmh.OAI_NS)
 
-    monkeypatch.setenv("DSPACE_OAI_URL", "http://dspace:8080/server/oai/request")
-    monkeypatch.setattr(oai_pmh, "get_record", fake_get_record)
+    def rest_get(self, url: str, **_kwargs: object) -> httpx2.Response:
+        request = httpx2.Request("GET", url)
+        if url.endswith("/api"):
+            self.root_calls += 1
+            return httpx2.Response(200, json={"dspaceUI": UI_URL}, request=request)
+        self.rest_urls.append(url)
+        uuid = url.rsplit("/", 1)[-1]
+        if uuid not in self.items:
+            return httpx2.Response(404, json={}, request=request)
+        return httpx2.Response(200, json={"handle": self.items[uuid]}, request=request)
 
-    card = DSpacePlugin().make_metadata_card_from_url(
-        "http://localhost:4001/handle/123456789/3"
-    )
-    assert requests == [
-        (
-            "http://dspace:8080/server/oai/request",
-            "oai:localhost:123456789/3",
-            "dim",
-        )
-    ]
+
+@pytest.fixture
+def dspace(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeDSpace]:
+    """A node with its DSpace at OAI_URL, its website at UI_URL, prefix 123456789."""
+    fake = FakeDSpace()
+    monkeypatch.setenv("DSPACE_OAI_URL", OAI_URL)
+    monkeypatch.setenv("DSPACE_HANDLE_PREFIX", "123456789")
+    monkeypatch.delenv("DSPACE_SERVER_URL", raising=False)
+    monkeypatch.setattr(oai_pmh, "repository_identifier", fake.repository_identifier)
+    monkeypatch.setattr(oai_pmh, "get_record", fake.get_record)
+    monkeypatch.setattr(httpx2, "get", fake.rest_get)
+    dspace_plugin.repository_identifier.cache_clear()
+    dspace_plugin.ui_url.cache_clear()
+    yield fake
+    dspace_plugin.repository_identifier.cache_clear()
+    dspace_plugin.ui_url.cache_clear()
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        f"{UI_URL}/handle/123456789/3",
+        f"{UI_URL}/handle/123456789/3?show=full",
+        f"{UI_URL}/handle/123456789/3/",
+        "https://hdl.handle.net/123456789/3",
+        "http://hdl.handle.net/123456789/3",
+        f"{UI_URL}/items/{ITEM_UUID}",
+        f"{UI_URL}/items/{ITEM_UUID.upper()}",
+    ],
+)
+def test_card_from_each_kind_of_link(dspace: FakeDSpace, url: str) -> None:
+    """Every link form ends up at the same OAI record, named by the repository."""
+    card = DSpacePlugin().make_metadata_card_from_url(url)
+    assert dspace.identifiers == ["oai:dspace.odisee.test:123456789/3"]
     assert card.title == "Introduction to AI"
     assert card.authors == ["John Doe"]
     assert card.last_modified_date == datetime(2026, 11, 20, 10, 18, 48, tzinfo=UTC)
     assert card.spdx_license_expression == "CC-BY-4.0"
+
+
+def test_items_link_asks_the_rest_api_for_the_handle(dspace: FakeDSpace) -> None:
+    DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/items/{ITEM_UUID}")
+    assert dspace.rest_urls == [f"http://dspace:8080/server/api/core/items/{ITEM_UUID}"]
+
+
+def test_server_url_setting_wins_over_the_oai_url(
+    dspace: FakeDSpace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DSPACE_SERVER_URL", "https://api.dspace.test/server/")
+    DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/items/{ITEM_UUID}")
+    assert dspace.rest_urls == [
+        f"https://api.dspace.test/server/api/core/items/{ITEM_UUID}"
+    ]
+
+
+def test_identify_and_the_website_are_asked_only_once(dspace: FakeDSpace) -> None:
+    plugin = DSpacePlugin()
+    plugin.make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
+    plugin.make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
+    plugin.make_metadata_card_from_url("https://hdl.handle.net/123456789/3")
+    assert dspace.identify_calls == 1
+    assert dspace.root_calls == 1
+
+
+def test_the_website_comes_from_the_rest_api(dspace: FakeDSpace) -> None:
+    """dspaceUI of <server>/api, not a setting, says which website is ours."""
+    assert dspace_plugin.ui_url("http://dspace:8080/server") == UI_URL
+    assert dspace.root_calls == 1
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        # Another repository with the same default prefix: not our item /3.
+        "https://dspace.other-library.test/handle/123456789/3",
+        "https://dspace.other-library.test/items/" + ITEM_UUID,
+        # Our host, but another port.
+        "http://localhost:8080/handle/123456789/3",
+        # The handle resolver, but with another library's prefix.
+        "https://hdl.handle.net/20.500.12345/3",
+        # Our UI, but a handle with another prefix.
+        f"{UI_URL}/handle/20.500.12345/3",
+        # Our UI, but not an item page.
+        f"{UI_URL}/collections/{ITEM_UUID}",
+        f"{UI_URL}/handle/123456789",
+        "not a link",
+    ],
+)
+def test_links_that_are_not_our_items_are_refused(dspace: FakeDSpace, url: str) -> None:
+    with pytest.raises(NotAnItemLinkError, match="not an item of the"):
+        DSpacePlugin().make_metadata_card_from_url(url)
+    assert dspace.identifiers == []
+    assert dspace.rest_urls == []
+
+
+@pytest.mark.usefixtures("dspace")
+def test_handle_resolver_needs_the_handle_prefix_setting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without our prefix, a hdl.handle.net link cannot be checked, so it is refused."""
+    monkeypatch.delenv("DSPACE_HANDLE_PREFIX")
+    with pytest.raises(NotAnItemLinkError):
+        DSpacePlugin().make_metadata_card_from_url("https://hdl.handle.net/123456789/3")
+
+
+def test_item_not_in_oai_pmh_yet(dspace: FakeDSpace) -> None:
+    dspace.in_oai = False
+    with pytest.raises(ItemNotFoundError, match="dspace oai import"):
+        DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/handle/123456789/99")
+
+
+def test_unknown_uuid(dspace: FakeDSpace) -> None:
+    unknown = "00000000-0000-0000-0000-000000000000"
+    with pytest.raises(ItemNotFoundError, match=unknown):
+        DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/items/{unknown}")
+    assert dspace.identifiers == []
+
+
+def test_uuid_without_a_handle(dspace: FakeDSpace) -> None:
+    dspace.items[ITEM_UUID] = None
+    with pytest.raises(ItemNotFoundError, match="no handle"):
+        DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/items/{ITEM_UUID}")
 
 
 def test_card_from_url_needs_the_dspace_setting(
@@ -190,17 +333,7 @@ def test_card_from_url_needs_the_dspace_setting(
 ) -> None:
     monkeypatch.delenv("DSPACE_OAI_URL", raising=False)
     with pytest.raises(RuntimeError, match="DSPACE_OAI_URL"):
-        DSpacePlugin().make_metadata_card_from_url(
-            "http://localhost:4001/handle/123456789/3"
-        )
-
-
-def test_card_from_url_needs_a_handle_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DSPACE_OAI_URL", "http://dspace:8080/server/oai/request")
-    with pytest.raises(ValueError, match="handle URL"):
-        DSpacePlugin().make_metadata_card_from_url(
-            "http://localhost:4001/items/a5f462bd-34f9-4d31-a888-93353c08748d"
-        )
+        DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
 
 
 def test_dspace_setting_reads_the_variable(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -30,7 +30,7 @@ def wait_for[T](check: Callable[[], T | None], timeout: float) -> T | None:
 
 
 def _text(output: bytes | str | None) -> str:
-    """Partial output of a timed-out command: TimeoutExpired keeps it as bytes."""
+    """Command output as text: run() and TimeoutExpired give it as bytes."""
     if isinstance(output, bytes):
         return output.decode(errors="replace")
     return output or ""
@@ -53,12 +53,14 @@ class PeeringNodes:
         try:
             result = subprocess.run(  # noqa: S603 - fixed arguments, no shell
                 command,
-                input=input_text,
+                # Bytes, not text: in text mode Windows turns LF into CRLF and
+                # inews rejects the article. Decoded below with _text().
+                input=input_text.encode() if input_text is not None else None,
                 capture_output=True,
-                text=True,
                 check=False,
                 timeout=timeout,
             )
+            result.stdout, result.stderr = _text(result.stdout), _text(result.stderr)
         except subprocess.TimeoutExpired as error:
             # A hanging command counts as a failed attempt, so wait_for keeps
             # waiting and the normal failure message with the logs still shows up.
@@ -93,6 +95,49 @@ class PeeringNodes:
         """True when innd on this node accepts commands, else None (keep waiting)."""
         result = self.exec(node, "ctlinnd", "mode", check=False)
         return True if "Server running" in result.stdout else None
+
+    def wait_ready(self, node: str) -> None:
+        """Wait until innd on this node accepts commands, or fail with its logs."""
+        if not wait_for(lambda: self.is_ready(node), READY_TIMEOUT):
+            logs = self.compose("logs", "--no-color", "--tail", "20", node, check=False)
+            pytest.fail(
+                f"INN on {node} was not ready within {READY_TIMEOUT} s.\n\n"
+                f"{self.diagnostics(node)}\n===== {node}: docker compose logs =====\n"
+                f"{logs.stdout}{logs.stderr}"
+            )
+
+    def has_group(self, node: str) -> bool | None:
+        """True when the test group is in the active file, else None (keep waiting)."""
+        result = self.exec(
+            node, "grep", "-q", f"^{NEWSGROUP} ", "/var/lib/news/active", check=False
+        )
+        return True if result.returncode == 0 else None
+
+    def wait_group(self, node: str) -> None:
+        """Wait until preseed.sh created the test group on this node, or fail."""
+        if not wait_for(lambda: self.has_group(node), READY_TIMEOUT):
+            pytest.fail(
+                f"preseed.sh did not create {NEWSGROUP} on {node} within "
+                f"{READY_TIMEOUT} s.\n\n{self.diagnostics(node)}"
+            )
+
+    def stop(self, node: str) -> None:
+        """Stop a node like `docker compose stop`: SIGTERM, then time to shut down."""
+        self.compose("stop", node)
+
+    def kill(self, node: str) -> None:
+        """Kill a node with SIGKILL, like a power cut: INN gets no time to clean up."""
+        self.compose("kill", "--signal", "SIGKILL", node)
+
+    def start(self, node: str) -> None:
+        """Start a stopped node again and wait until INN is ready."""
+        self.compose("start", node)
+        self.wait_ready(node)
+
+    def exit_code(self, node: str) -> int:
+        """The exit code of a stopped node: 0 when INN shut down cleanly."""
+        result = self.compose("ps", "--all", "--format", "{{.ExitCode}}", node)
+        return int(result.stdout.strip())
 
     def post(self, node: str, message_id: str, subject: str) -> None:
         """Post an article on a node with inews, read from stdin (no shell quoting)."""
