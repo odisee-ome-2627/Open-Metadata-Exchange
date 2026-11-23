@@ -68,7 +68,7 @@ def test_every_documented_answer_has_an_example_for_the_frontend_mocks() -> None
     operation = client.get("/openapi.json").json()["paths"]["/api/channel/{name}/save"][
         "post"
     ]
-    for status in ("404", "409", "501", "502"):
+    for status in ("404", "409", "422", "501", "502"):
         assert (
             "example" in operation["responses"][status]["content"]["application/json"]
         )

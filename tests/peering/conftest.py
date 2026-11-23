@@ -13,14 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from .nodes import (
-    BUILD_TIMEOUT,
-    NEWSGROUP,
-    NODES,
-    READY_TIMEOUT,
-    PeeringNodes,
-    wait_for,
-)
+from .nodes import BUILD_TIMEOUT, NODES, PeeringNodes
 
 
 def save_logs(nodes: PeeringNodes) -> None:
@@ -55,18 +48,10 @@ def peering_nodes() -> Iterator[PeeringNodes]:
     try:
         nodes.compose("up", "--detach", "--build", timeout=BUILD_TIMEOUT)
         for node in NODES:
-            if not wait_for(lambda node=node: nodes.is_ready(node), READY_TIMEOUT):
-                pytest.fail(
-                    f"INN on {node} was not ready within {READY_TIMEOUT} s.\n\n"
-                    f"{nodes.diagnostics(node)}"
-                )
+            nodes.wait_ready(node)
             # A node only stores articles in groups it knows. preseed.sh creates
             # the group from local_newsgroups in node-*.json (post_start hook).
-            if not wait_for(lambda node=node: nodes.has_group(node), READY_TIMEOUT):
-                pytest.fail(
-                    f"preseed.sh did not create {NEWSGROUP} on {node} within "
-                    f"{READY_TIMEOUT} s.\n\n{nodes.diagnostics(node)}"
-                )
+            nodes.wait_group(node)
         yield nodes
     finally:
         save_logs(nodes)
