@@ -34,7 +34,7 @@ CARD = EducationResource(
 client = TestClient(app)
 
 
-def card_post() -> Post:
+def card_post(metadata: bytes | None = None) -> Post:
     return Post(
         id=7,
         message_id=MESSAGE_ID,
@@ -46,7 +46,7 @@ def card_post() -> Post:
             Attachment(
                 filename="metadata.json",
                 mime_subtype="json",
-                data=CARD.model_dump_json().encode(),
+                data=CARD.model_dump_json().encode() if metadata is None else metadata,
             )
         ],
         date=datetime(2026, 11, 21, tzinfo=UTC),
@@ -134,6 +134,20 @@ def test_a_missing_card_gives_404(monkeypatch: pytest.MonkeyPatch) -> None:
     response = client.post(SAVE_URL, json={"id": 7})
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert len(SavingPlugin.calls) == calls_before  # the plugin was never called
+
+
+@pytest.mark.usefixtures("saving_plugin")
+@pytest.mark.thread_unsafe(reason="replaces ome_node.get_post and the plugin")
+def test_a_card_this_node_cannot_read_gives_422(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unreadable = card_post(metadata=b'{"title": 5}')
+    monkeypatch.setattr(ome_node, "get_post", lambda _channel, _number: unreadable)
+    calls_before = len(SavingPlugin.calls)
+    response = client.post(SAVE_URL, json={"id": 7})
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": "This card cannot be read by this node"}
+    assert len(SavingPlugin.calls) == calls_before  # nothing half-empty is saved
 
 
 def test_from_post_keeps_the_message_id() -> None:

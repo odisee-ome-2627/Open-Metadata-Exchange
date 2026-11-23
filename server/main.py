@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader
+from pydantic import ValidationError
 
 from server import db, ome_node
 from server.helpers import MocAPI
@@ -173,6 +174,17 @@ SAVE_RESPONSES = {
         "description": "Already saved, links to the existing item (from #228)",
         "content": {"application/json": {"example": {"detail": SAVED}}},
     },
+    422: {
+        "description": (
+            "The body has no card number, or this node cannot read the card's"
+            " metadata.json"
+        ),
+        "content": {
+            "application/json": {
+                "example": {"detail": "This card cannot be read by this node"}
+            }
+        },
+    },
     501: {
         "model": ErrorResponse,
         "description": "The plugin of this node cannot save",
@@ -211,9 +223,13 @@ async def save_card(
             404, detail=f"Card {card.id} not found in {name}"
         ) from error
     try:
-        saved = await asyncio.to_thread(
-            plugin.save_resource, card_of(post), post.message_id
-        )
+        card = card_of(post)
+    except ValidationError as error:
+        raise HTTPException(
+            422, detail="This card cannot be read by this node"
+        ) from error
+    try:
+        saved = await asyncio.to_thread(plugin.save_resource, card, post.message_id)
     except CMSUnreachableError as error:
         raise HTTPException(502, detail="The CMS is unreachable") from error
     return SaveResponse(**saved.model_dump())
