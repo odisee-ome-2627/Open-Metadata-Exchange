@@ -8,6 +8,9 @@ x-nntp-node: &nntp-node
     context: ../..
     dockerfile: Dockerfile-nntp
   image: ome-nntp:peering-test
+  # Same hook as docker-compose.yml: preseed.sh creates the groups in local_newsgroups.
+  post_start:
+    - command: sh -c "/usr/local/bin/wait_for_tcp.sh 119 20 && /usr/local/bin/preseed.sh"
 
 services:
   node-a:

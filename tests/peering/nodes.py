@@ -96,6 +96,13 @@ class PeeringNodes:
         result = self.exec(node, "ctlinnd", "mode", check=False)
         return True if "Server running" in result.stdout else None
 
+    def has_group(self, node: str) -> bool | None:
+        """True when the test group is in the active file, else None (keep waiting)."""
+        result = self.exec(
+            node, "grep", "-q", f"^{NEWSGROUP} ", "/var/lib/news/active", check=False
+        )
+        return True if result.returncode == 0 else None
+
     def post(self, node: str, message_id: str, subject: str) -> None:
         """Post an article on a node with inews, read from stdin (no shell quoting)."""
         article = (

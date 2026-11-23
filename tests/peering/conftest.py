@@ -47,7 +47,7 @@ def save_logs(nodes: PeeringNodes) -> None:
 
 @pytest.fixture(scope="session")
 def peering_nodes() -> Iterator[PeeringNodes]:
-    """Start both nodes, wait until INN is ready, create the test group, clean up."""
+    """Start both nodes, wait until INN and the test group are ready, clean up."""
     docker = shutil.which("docker")
     if docker is None:
         pytest.fail("The peering test needs Docker with Docker Compose v2 on PATH.")
@@ -60,8 +60,13 @@ def peering_nodes() -> Iterator[PeeringNodes]:
                     f"INN on {node} was not ready within {READY_TIMEOUT} s.\n\n"
                     f"{nodes.diagnostics(node)}"
                 )
-            # A node only stores articles in groups it knows.
-            nodes.exec(node, "ctlinnd", "newgroup", NEWSGROUP)
+            # A node only stores articles in groups it knows. preseed.sh creates
+            # the group from local_newsgroups in node-*.json (post_start hook).
+            if not wait_for(lambda node=node: nodes.has_group(node), READY_TIMEOUT):
+                pytest.fail(
+                    f"preseed.sh did not create {NEWSGROUP} on {node} within "
+                    f"{READY_TIMEOUT} s.\n\n{nodes.diagnostics(node)}"
+                )
         yield nodes
     finally:
         save_logs(nodes)
