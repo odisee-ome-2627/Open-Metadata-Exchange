@@ -1,0 +1,19 @@
+# Spike: the two peering test nodes, with the image that can verify signed control articles.
+# Used on top of tests/peering/compose.yaml, see README.md.
+
+x-spike-node: &spike-node
+  build:
+    # Relative paths start from the first compose file: tests/peering.
+    context: ../../spike/signed_newgroups
+    dockerfile: Dockerfile
+  image: ome-nntp:spike-signed-newgroups
+  environment:
+    # innd inherits HOME=/root from the entrypoint. pgpverify runs gpg1 as user news, which
+    # cannot create /root/.gnupg and then fails every check. Use the home of user news.
+    HOME: /var/spool/news
+
+services:
+  node-a:
+    <<: *spike-node
+  node-b:
+    <<: *spike-node
