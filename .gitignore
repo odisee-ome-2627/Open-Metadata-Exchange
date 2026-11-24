@@ -192,3 +192,6 @@ seed/local/
 
 # State of server/plugins/dspace/publish_collection.py (#225)
 dspace_published.json
+
+# The password of the node database, a Docker secret (#298)
+ome_db_password

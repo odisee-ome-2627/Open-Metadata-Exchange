@@ -1,16 +1,30 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from typing import Annotated
 
 import httpx2
-from fastapi import FastAPI, Request
+import nntp
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader
+from pydantic import ValidationError
 
-from server import ome_node
+from server import db, ome_node
 from server.helpers import MocAPI
+from server.plugins.ome_plugin import (
+    CMSUnreachableError,
+    ItemNotFoundError,
+    NotAnItemLinkError,
+    OMEPlugin,
+    can_save,
+)
 from server.schemas import (
+    AlreadySavedResponse,
     Attachment,
     BrowseResponse,
     Card,
@@ -18,20 +32,43 @@ from server.schemas import (
     Channel,
     ChannelResourcesResponse,
     ChannelSummaryResponse,
+    ErrorResponse,
     ExploreSummary,
     MiniMetadata,
     Post,
+    ResourcePageResponse,
+    SaveResponse,
 )
 from server.utils import (
     browse_results,
+    card_of,
     explore_summary,
     get_channel_resources,
     get_channel_summary,
+    post_to_page,
 )
 
 unused = httpx2
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Open the node database at start and close it at stop."""
+    url = db.database_url()
+    if not url:
+        print("No OME_DATABASE_URL: the node runs without its database", flush=True)
+        app.state.db = None
+        yield
+        return
+    await asyncio.to_thread(db.prepare, url)
+    app.state.db = await db.open_pool(url)
+    try:
+        yield
+    finally:
+        await app.state.db.close()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -91,7 +128,15 @@ async def get_channel_cards(
 @app.post("/api/publish_url")
 async def create_post(meta: MiniMetadata) -> bool:
     plugin = ome_node.plugin
-    metadata = plugin.make_metadata_card_from_url(meta.url)
+    # Both calls block (HTTP to the CMS, NNTP to INN): keep them off the event loop.
+    try:
+        metadata = await asyncio.to_thread(plugin.make_metadata_card_from_url, meta.url)
+    except ItemNotFoundError as error:
+        raise HTTPException(404, detail=str(error)) from error
+    except NotAnItemLinkError as error:
+        raise HTTPException(400, detail=str(error)) from error
+    except CMSUnreachableError as error:
+        raise HTTPException(502, detail="The CMS is unreachable") from error
     # TODO(anooparyal): create a more generic version of the metadata and add that
     # to the list of attachments
     post = Post(
@@ -109,7 +154,7 @@ async def create_post(meta: MiniMetadata) -> bool:
         ],  # add the other generic metadata here
         date=datetime.now(tz=UTC),
     )
-    sent = ome_node.create_post(post)
+    sent = await asyncio.to_thread(ome_node.create_post, post)
     print(f"Sent: {sent}")
     # pynntp returns the Message-ID (or True); a failed post raises instead.
     return bool(sent)
@@ -118,6 +163,91 @@ async def create_post(meta: MiniMetadata) -> bool:
 @app.post("/api/channel/{name}/import")
 async def import_post(name: str, card: CardRef) -> bool:
     return ome_node.import_post(name, card.id)
+
+
+def current_plugin() -> OMEPlugin:
+    """The plugin of this node. Later a middleware picks it per library (ADR 0011)."""
+    return ome_node.plugin
+
+
+SAVED = {
+    "cms_id": "123456789/42",
+    "cms_url": "https://repo.example.org/handle/123456789/42",
+}
+SAVE_RESPONSES = {
+    404: {
+        "model": ErrorResponse,
+        "description": "No card with this number in the channel",
+        "content": {
+            "application/json": {
+                "example": {"detail": "Card 7 not found in ome.dspace"}
+            }
+        },
+    },
+    409: {
+        "model": AlreadySavedResponse,
+        "description": "Already saved, links to the existing item (from #228)",
+        "content": {"application/json": {"example": {"detail": SAVED}}},
+    },
+    422: {
+        "description": (
+            "The body has no card number, or this node cannot read the card's"
+            " metadata.json"
+        ),
+        "content": {
+            "application/json": {
+                "example": {"detail": "This card cannot be read by this node"}
+            }
+        },
+    },
+    501: {
+        "model": ErrorResponse,
+        "description": "The plugin of this node cannot save",
+        "content": {
+            "application/json": {"example": {"detail": "This plugin cannot save cards"}}
+        },
+    },
+    502: {
+        "model": ErrorResponse,
+        "description": "The CMS did not answer",
+        "content": {
+            "application/json": {"example": {"detail": "The CMS is unreachable"}}
+        },
+    },
+}
+
+
+@app.post("/api/channel/{name}/save", responses=SAVE_RESPONSES)
+async def save_card(
+    name: str,
+    card: CardRef,
+    plugin: Annotated[OMEPlugin, Depends(current_plugin)],
+) -> SaveResponse:
+    """Save a card from the network into this library's CMS.
+
+    The NNTP client and the plugin are synchronous, so both run in a thread:
+    saving may take seconds, and the event loop keeps serving other requests.
+    No mapping yet: a second save makes a second item, the 409 comes with #228.
+    """
+    if not can_save(plugin):
+        raise HTTPException(501, detail="This plugin cannot save cards")
+    try:
+        post = await asyncio.to_thread(ome_node.get_post, name, card.id)
+    except nntp.NNTPTemporaryError as error:  # 411 no such group, 423 no such article
+        raise HTTPException(
+            404, detail=f"Card {card.id} not found in {name}"
+        ) from error
+    try:
+        card = card_of(post)
+    except ValidationError as error:
+        raise HTTPException(
+            422, detail="This card cannot be read by this node"
+        ) from error
+    try:
+        saved = await asyncio.to_thread(plugin.save_resource, card, post.message_id)
+    except CMSUnreachableError as error:
+        raise HTTPException(502, detail="The CMS is unreachable") from error
+    return SaveResponse(**saved.model_dump())
 
 
 @app.get("/api/imls/v2/collections/browse/")
@@ -143,6 +273,21 @@ async def get_channel(channel: str, _id: int) -> ChannelResourcesResponse:
 @app.get("/api/imls/v2/resources/")
 async def get_resources(tenant: str) -> ChannelResourcesResponse:
     return get_channel_resources(tenant)
+
+
+@app.get(
+    "/api/imls/v2/resources/{channel}/materials/{article}",
+    responses={404: {"model": ErrorResponse, "description": "No such card"}},
+)
+async def get_resource(channel: str, article: int) -> ResourcePageResponse:
+    """One card for the resource page, with its channel for the save button."""
+    try:
+        post = ome_node.get_post(channel, article)
+    except nntp.NNTPTemporaryError as error:  # 411 no such group, 423 no such article
+        raise HTTPException(
+            404, detail=f"Card {article} not found in {channel}"
+        ) from error
+    return post_to_page(post)
 
 
 app.mount(

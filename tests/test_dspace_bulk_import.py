@@ -89,8 +89,19 @@ def test_settings_come_from_the_environment(
     assert sent[0]["set"] == "col_123456789_2"
 
 
+@pytest.mark.usefixtures("sent")
+def test_the_oai_url_can_come_from_the_server_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DSPACE_OAI_URL", raising=False)
+    monkeypatch.setenv("DSPACE_SERVER_URL", OAI_URL.removesuffix("/oai/request"))
+    monkeypatch.setenv("DSPACE_COLLECTION_HANDLE", "123456789/2")
+    assert len(list(bulk_import.bulk_import())) == 2
+
+
 def test_missing_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DSPACE_OAI_URL", raising=False)
+    monkeypatch.delenv("DSPACE_SERVER_URL", raising=False)
     monkeypatch.delenv("DSPACE_COLLECTION_HANDLE", raising=False)
     with pytest.raises(RuntimeError, match="DSPACE_OAI_URL"):
         list(bulk_import.bulk_import())

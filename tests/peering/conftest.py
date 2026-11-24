@@ -13,14 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from .nodes import (
-    BUILD_TIMEOUT,
-    NEWSGROUP,
-    NODES,
-    READY_TIMEOUT,
-    PeeringNodes,
-    wait_for,
-)
+from .nodes import BUILD_TIMEOUT, NODES, PeeringNodes
 
 
 def save_logs(nodes: PeeringNodes) -> None:
@@ -47,7 +40,7 @@ def save_logs(nodes: PeeringNodes) -> None:
 
 @pytest.fixture(scope="session")
 def peering_nodes() -> Iterator[PeeringNodes]:
-    """Start both nodes, wait until INN is ready, create the test group, clean up."""
+    """Start both nodes, wait until INN and the test group are ready, clean up."""
     docker = shutil.which("docker")
     if docker is None:
         pytest.fail("The peering test needs Docker with Docker Compose v2 on PATH.")
@@ -55,13 +48,10 @@ def peering_nodes() -> Iterator[PeeringNodes]:
     try:
         nodes.compose("up", "--detach", "--build", timeout=BUILD_TIMEOUT)
         for node in NODES:
-            if not wait_for(lambda node=node: nodes.is_ready(node), READY_TIMEOUT):
-                pytest.fail(
-                    f"INN on {node} was not ready within {READY_TIMEOUT} s.\n\n"
-                    f"{nodes.diagnostics(node)}"
-                )
-            # A node only stores articles in groups it knows.
-            nodes.exec(node, "ctlinnd", "newgroup", NEWSGROUP)
+            nodes.wait_ready(node)
+            # A node only stores articles in groups it knows. preseed.sh creates
+            # the group from local_newsgroups in node-*.json (post_start hook).
+            nodes.wait_group(node)
         yield nodes
     finally:
         save_logs(nodes)

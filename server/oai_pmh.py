@@ -12,10 +12,15 @@ from datetime import UTC, datetime
 
 import httpx2
 
-OAI_NS = {"oai": "http://www.openarchives.org/OAI/2.0/"}
+OAI_NS = {
+    "oai": "http://www.openarchives.org/OAI/2.0/",
+    "oai-id": "http://www.openarchives.org/OAI/2.0/oai-identifier",
+}
 # OAI-PMH error codes this module reacts to.
 ID_DOES_NOT_EXIST = "idDoesNotExist"
 NO_RECORDS_MATCH = "noRecordsMatch"
+# Not an OAI-PMH code: used when verb=Identify names no repositoryIdentifier.
+NO_REPOSITORY_IDENTIFIER = "noRepositoryIdentifier"
 
 
 class OAIPMHError(Exception):
@@ -51,6 +56,23 @@ def is_deleted(record: ET.Element) -> bool:
     """A deleted record only has a header with status="deleted", no metadata."""
     header = record.find("oai:header", OAI_NS)
     return header is not None and header.get("status") == "deleted"
+
+
+def repository_identifier(base_url: str) -> str:
+    """
+    The repositoryIdentifier that verb=Identify announces, e.g. ``localhost``.
+
+    It is the middle part of every ``oai:<repositoryIdentifier>:<local id>``. The
+    repository decides it, so build identifiers from this, not from a pasted link.
+    """
+    root = _parse(_fetch(base_url, {"verb": "Identify"}))
+    path = (
+        "oai:Identify/oai:description/oai-id:oai-identifier/oai-id:repositoryIdentifier"
+    )
+    if not (value := (root.findtext(path, "", OAI_NS) or "").strip()):
+        msg = f"{base_url} announces no repositoryIdentifier in verb=Identify"
+        raise OAIPMHError(NO_REPOSITORY_IDENTIFIER, msg)
+    return value
 
 
 def get_record(base_url: str, identifier: str, metadata_prefix: str) -> ET.Element:

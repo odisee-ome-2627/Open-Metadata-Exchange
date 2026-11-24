@@ -2,8 +2,11 @@ import json
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from server.plugins.ome_plugin import SavedItem
 
 SPDX_LICENSES_JSON = Path(__file__).with_name("spdx_licenses.json")
 
@@ -94,6 +97,7 @@ class Attachment(BaseModel):
 
 class Post(BaseModel):
     id: int | None
+    message_id: str = ""
     channels: list[str]
     admin_contact: str
     subject: str
@@ -109,6 +113,37 @@ class CardRef(BaseModel):
 #######
 
 
+class SaveResponse(SavedItem):
+    """200 of `POST /api/channel/{name}/save` (#227)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "status": "saved",
+                    "cms_id": "123456789/42",
+                    "cms_url": "https://repo.example.org/handle/123456789/42",
+                }
+            ]
+        }
+    )
+
+    status: Literal["saved"] = "saved"
+
+
+class ErrorResponse(BaseModel):
+    detail: str
+
+
+class AlreadySavedResponse(BaseModel):
+    """409: the card is already in the CMS. Only returned once #228 exists."""
+
+    detail: SavedItem
+
+
+#######
+
+
 class ResourceSummaryData(BaseModel):
     id: int
     name: str
@@ -117,6 +152,7 @@ class ResourceSummaryData(BaseModel):
     educationLevels: list[str]
     micrositeName: str
     micrositeSlug: str
+    channel: str
     numAlerts: int
     numResources: int
     numSubscribers: int
@@ -127,6 +163,7 @@ class ResourceSummaryData(BaseModel):
 
 class ResourceDetailData(BaseModel):
     id: int
+    channel: str
     title: str
     abstract: str
     source: str
@@ -167,6 +204,45 @@ class ExploreSection(BaseModel):
 class ClientInfo(BaseModel):
     name: str
     slug: str
+
+
+class ResourcePageData(BaseModel):
+    """One card on the resource page (`frontend/src/pages/Asset`).
+
+    The names are the ones the page reads. Fields the network does not have yet
+    keep an empty default, so the page never meets `undefined`.
+    """
+
+    id: int
+    channel: str
+    title: str
+    abstract: str
+    authors: list[str] = []
+    generalSubjects: list[str] = []
+    keywords_names: list[str] = []
+    levels: list[str] = []
+    languages: list[str] = []
+    materialTypes: list[str] = []
+    mediaFormats: list[str] = []
+    collections_titles: list[str] = []
+    createDate: datetime | None = None
+    updateDate: datetime | None = None
+    license_title: str = ""
+    license_image: str = ""
+    micrositeResourceURL: str = ""
+    thumbnail: str = ""
+    rating: int = 0
+    visits: int = 0
+    saves_count: int = 0
+    downloads_count: int = 0
+    history: list[str] = []
+
+
+class ResourcePageResponse(BaseModel):
+    """`GET /api/imls/v2/resources/{channel}/materials/{article}`."""
+
+    clientInfo: ClientInfo
+    resource: ResourcePageData
 
 
 class ResponseCode(BaseModel):
