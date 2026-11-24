@@ -171,7 +171,7 @@ class ResourceDetailData(BaseModel):
     metadata: list[str]
     thumbnail: str | None
     timestamp: datetime
-    updatedDate: datetime
+    updateDate: datetime
     detailURL: str | None
     grade_sublevel: list[str]
     accessibility: list[str]

@@ -30,6 +30,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CircularProgress from '@mui/material/CircularProgress';
 import { FilterAlt } from '@mui/icons-material';
 import { SaveToLibraryButton } from 'features/SaveToLibrary';
+import { updatedDate } from 'shared/lib/date/updatedDate';
 
 let PAGE = 1;
 
@@ -593,7 +594,7 @@ export function CollectionDetails() {
                       >
                         Updated
                         {' '}
-                        {new Date(resource.updateDate).toDateString()}
+                        {updatedDate(resource.updateDate)}
                       </Typography>
                       <Typography
                         variant="body2"

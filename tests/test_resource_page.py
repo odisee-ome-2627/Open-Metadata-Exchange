@@ -100,6 +100,13 @@ def test_summary_and_details_carry_the_channel() -> None:
     assert details.detailURL == PAGE_URL
 
 
+def test_the_cards_of_a_channel_carry_update_date_for_the_frontend() -> None:
+    # The cards read `resource.updateDate`, another name shows "Invalid Date"
+    details = utils.post_to_details(a_post(metadata_json(CARD))).model_dump(mode="json")
+    assert details["updateDate"] == "2026-11-21T00:00:00Z"
+    assert "updatedDate" not in details
+
+
 @pytest.fixture
 def card_on_the_node(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
