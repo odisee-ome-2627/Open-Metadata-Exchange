@@ -26,12 +26,14 @@ from server.plugins.dspace.dspace_models import (
 from server.plugins.dspace.save import DepositSettings, save_to_dspace
 from server.plugins.oapen_books.oapen_models import OAPEN_LICENSE_TO_SPDX
 from server.plugins.ome_plugin import (
+    CMSUnreachableError,
     EducationResource,
     ItemNotFoundError,
     NotAnItemLinkError,
     OMEPlugin,
     SavedItem,
 )
+from server.sword import UNREACHABLE_STATUSES
 
 # The three kinds of item links a librarian can paste:
 # a handle URL on the DSpace UI, e.g. http://localhost:4001/handle/123456789/3
@@ -100,9 +102,19 @@ def ui_url(dspace_server_url: str) -> str:
     The address of the DSpace website, e.g. http://localhost:4001.
 
     The REST API root names it in ``dspaceUI`` (no login needed). It is asked once
-    and kept, like the repositoryIdentifier.
+    and kept, like the repositoryIdentifier; a failed ask is not kept. Raise
+    CMSUnreachableError when DSpace does not answer or answers 502, 503 or 504, so
+    the routes answer 502 and the frontend can offer to try again.
     """
-    response = httpx2.get(f"{dspace_server_url}/api", timeout=30)
+    api = f"{dspace_server_url}/api"
+    try:
+        response = httpx2.get(api, timeout=30)
+    except httpx2.TransportError as error:
+        msg = f"DSpace at {api} did not answer: {error}"
+        raise CMSUnreachableError(msg) from error
+    if response.status_code in UNREACHABLE_STATUSES:
+        msg = f"DSpace at {api} answered {response.status_code}"
+        raise CMSUnreachableError(msg)
     if not (url := response.raise_for_status().json().get("dspaceUI")):
         msg = f"{dspace_server_url}/api does not name the DSpace website (dspaceUI)"
         raise RuntimeError(msg)
