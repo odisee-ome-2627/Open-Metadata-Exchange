@@ -437,7 +437,12 @@ export function CollectionDetails() {
                 ) : (
                   <Button variant="outlined" color="success" startIcon={<CheckCircleIcon />}>Subscribed</Button>
                 )}
-                <SaveToLibraryButton micrositeSlug={micrositeSlug || name} id={id} name={collectionName} />
+
+                <SaveToLibraryButton
+                  micrositeSlug={micrositeSlug || name}
+                  id={id}
+                  name={collectionName || collectionMicrositeName}
+                />
               </Stack>
             </CardContent>
           </Card>
