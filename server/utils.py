@@ -143,7 +143,7 @@ def post_to_details(post: Post) -> ResourceDetailData:
         metadata=[],
         thumbnail=None,
         timestamp=post.date,
-        updatedDate=post.date,
+        updateDate=post.date,
         detailURL=f"/api/imls/v2/resources/{post.channels[0]}/materials/{post.id}",
         grade_sublevel=["High School"],
         accessibility=[],

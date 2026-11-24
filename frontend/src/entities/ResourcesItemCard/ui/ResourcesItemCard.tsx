@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { memo, useState } from 'react';
 import { clickOnEnterOrSpace } from 'shared/lib/a11y/clickOnEnterOrSpace';
+import { updatedDate } from 'shared/lib/date/updatedDate';
 import cls from './ResourcesItemCard.module.scss';
 import AccessibleIcon from '../../../shared/assets/icons/accessible.svg';
 import FullCourseIcon from '../../../shared/assets/icons/full-course.svg';
@@ -53,7 +54,7 @@ export const ResourcesItemCard = memo(({ resource, className }: CollectionItemCa
         <p>
           Updated
           {' '}
-          {new Date(resource.updateDate).toDateString()}
+          {updatedDate(resource.updateDate)}
           {' '}
         </p>
         <div style={{ display: 'flex' }}>
