@@ -180,7 +180,7 @@ the same `config.json`:
     "handle_prefix": "123456789",
     "collection_handle": "123456789/2",
     "newsgroup": "ome.example",
-    "site_name": "Example Library",
+    "site_name": "ExampleLibrary",
     "logo": "https://example.org/logo.png",
     "librarian_contact": "librarian@example.org",
     "deposit_email": "deposit@ome.test",
