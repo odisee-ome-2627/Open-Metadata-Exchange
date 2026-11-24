@@ -178,7 +178,7 @@ The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `confi
     "handle_prefix": "123456789",
     "collection_handle": "123456789/2",
     "newsgroup": "ome.example",
-    "site_name": "ExampleLibrary",
+    "site_name": "Example Library",
     "logo": "https://example.org/logo.png",
     "librarian_contact": "librarian@example.org"
 }
