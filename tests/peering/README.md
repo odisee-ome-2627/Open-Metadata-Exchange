@@ -23,6 +23,7 @@ entrypoint, peers in `config.json`) without the API or the frontend.
 | `test_innfeed_config.py` | Checks that the innfeed reconnect times from the config end up in `innfeed.conf` |
 | `test_healthcheck.py` | Checks that the image turns healthy, and that its healthcheck fails while innd is throttled |
 | `test_volumes.py` | Checks that a new container keeps the articles, and that empty host folders work |
+| `test_logs.py` | Checks that INN's own messages reach `docker logs`: the reason a broken config stops a node, and the messages of a clean stop |
 | `test_stranger.py` | A container that is not a peer cannot feed, stream or post an article; a client that logs in can read and post |
 
 Each config is mounted as a Docker secret in `/run/secrets/`, and `OME_CONFIG` tells the
