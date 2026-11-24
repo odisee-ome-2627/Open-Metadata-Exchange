@@ -10,12 +10,15 @@ from datetime import UTC, datetime
 from http import HTTPStatus
 from typing import ClassVar, override
 
+import httpx2
 import nntp
 import pytest
 from fastapi.testclient import TestClient
 
 from server import ome_node
 from server.main import app, current_plugin
+from server.plugins.dspace import plugin as dspace_plugin
+from server.plugins.dspace.plugin import DSpacePlugin
 from server.plugins.ome_plugin import (
     CMSUnreachableError,
     EducationResource,
@@ -118,6 +121,33 @@ def test_the_plugin_gets_the_card_and_its_message_id() -> None:
 @pytest.mark.usefixtures("card_on_the_node", "unreachable_plugin")
 @pytest.mark.thread_unsafe(reason="replaces ome_node.get_post and the plugin")
 def test_an_unreachable_cms_gives_502() -> None:
+    response = client.post(SAVE_URL, json={"id": 7})
+    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    assert response.json() == {"detail": "The CMS is unreachable"}
+
+
+@pytest.fixture
+def dspace_stopped(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """The real DSpace plugin, with every setting, while DSpace does not answer."""
+
+    def no_answer(url: str, **_kwargs: object) -> httpx2.Response:
+        msg = "Name or service not known"
+        raise httpx2.ConnectError(msg, request=httpx2.Request("GET", url))
+
+    monkeypatch.setenv("DSPACE_SERVER_URL", "http://dspace:8080/server")
+    monkeypatch.setenv("DSPACE_COLLECTION_HANDLE", "123456789/2")
+    monkeypatch.setenv("DSPACE_DEPOSIT_EMAIL", "deposit@ome.test")
+    monkeypatch.setenv("DSPACE_DEPOSIT_PASSWORD", "secret")
+    monkeypatch.setattr(httpx2, "get", no_answer)
+    dspace_plugin.ui_url.cache_clear()
+    yield from use(DSpacePlugin)
+    dspace_plugin.ui_url.cache_clear()
+
+
+@pytest.mark.usefixtures("card_on_the_node", "dspace_stopped")
+@pytest.mark.thread_unsafe(reason="replaces ome_node.get_post, the plugin and httpx2")
+def test_saving_to_a_stopped_dspace_gives_502() -> None:
+    """The first call to DSpace asks its website (dspaceUI): that must give 502 too."""
     response = client.post(SAVE_URL, json={"id": 7})
     assert response.status_code == HTTPStatus.BAD_GATEWAY
     assert response.json() == {"detail": "The CMS is unreachable"}

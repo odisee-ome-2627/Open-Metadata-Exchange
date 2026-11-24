@@ -62,6 +62,10 @@ def test_dspace_settings_come_from_config() -> None:
                 "site_name": "Odisee",
                 "logo": "https://example.org/logo.png?itok=abc",
                 "librarian_contact": "librarian@example.org",
+                "server_url": "http://dspace:8080/server",
+                "public_server_url": "http://localhost:8080/server",
+                "deposit_email": "deposit@ome.test",
+                "deposit_password": "secret",
             }
         }
     )
@@ -72,6 +76,10 @@ def test_dspace_settings_come_from_config() -> None:
     assert env["DSPACE_SITE_NAME"] == "Odisee"
     assert env["DSPACE_LOGO"] == "https://example.org/logo.png?itok=abc"
     assert env["DSPACE_LIBRARIAN_CONTACT"] == "librarian@example.org"
+    assert env["DSPACE_SERVER_URL"] == "http://dspace:8080/server"
+    assert env["DSPACE_PUBLIC_SERVER_URL"] == "http://localhost:8080/server"
+    assert env["DSPACE_DEPOSIT_EMAIL"] == "deposit@ome.test"
+    assert env["DSPACE_DEPOSIT_PASSWORD"] == "secret"  # noqa: S105
     assert env["CMS_PLUGIN"] == "server.plugins.dspace.plugin.DSpacePlugin"
 
 
@@ -87,6 +95,10 @@ def test_a_node_without_dspace_settings_still_renders(dspace: dict | None) -> No
     assert env["DSPACE_SITE_NAME"] == ""
     assert env["DSPACE_LOGO"] == ""
     assert env["DSPACE_LIBRARIAN_CONTACT"] == ""
+    assert env["DSPACE_SERVER_URL"] == ""
+    assert env["DSPACE_PUBLIC_SERVER_URL"] == ""
+    assert env["DSPACE_DEPOSIT_EMAIL"] == ""
+    assert env["DSPACE_DEPOSIT_PASSWORD"] == ""
     assert env["NNTP_USER"] == "someusername"
 
 

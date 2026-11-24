@@ -57,6 +57,16 @@ class CMSUnreachableError(Exception):
     """The plugin could not reach its CMS. The save route answers 502."""
 
 
+class CardAlreadySavedError(Exception):
+    """The CMS already has an item for this card. The save route answers 409."""
+
+    def __init__(self, existing: SavedItem, message: str = "") -> None:
+        super().__init__(
+            message or f"The CMS already has this card: {existing.cms_url}"
+        )
+        self.existing = existing
+
+
 class NotAnItemLinkError(ValueError):
     """make_metadata_card_from_url got a link that is not an item of this CMS (400)."""
 

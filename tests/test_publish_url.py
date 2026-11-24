@@ -10,6 +10,7 @@ from server import ome_node
 from server.main import app
 from server.plugins.dspace.plugin import DSpacePlugin
 from server.plugins.ome_plugin import (
+    CMSUnreachableError,
     EducationResource,
     ItemNotFoundError,
     NotAnItemLinkError,
@@ -109,4 +110,21 @@ def test_publish_url_explains_a_bad_link(
     response = TestClient(app).post("/api/publish_url", json={"url": ITEM_URL})
     assert response.status_code == status
     assert response.json() == {"detail": str(error)}
+    assert posts == []  # nothing reaches INN
+
+
+def test_publish_url_answers_502_when_the_cms_is_unreachable(
+    inn_answers: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """DSpace is down: 502 like the save route, so the librarian can try again."""
+
+    def unreachable(_url: str) -> EducationResource:
+        msg = "DSpace at http://dspace:8080/server/api did not answer"
+        raise CMSUnreachableError(msg)
+
+    posts = inn_answers(lambda _post: True)
+    monkeypatch.setattr(ome_node.plugin, "make_metadata_card_from_url", unreachable)
+    response = TestClient(app).post("/api/publish_url", json={"url": ITEM_URL})
+    assert response.status_code == HTTPStatus.BAD_GATEWAY
+    assert response.json() == {"detail": "The CMS is unreachable"}
     assert posts == []  # nothing reaches INN

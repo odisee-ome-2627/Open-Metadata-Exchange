@@ -18,8 +18,9 @@ Bulk-read a DSpace collection and turn its items into OME metadata cards.
 
 The settings come from the environment, like the rest of the plugin:
 
-- ``DSPACE_OAI_URL``: the OAI-PMH endpoint, e.g.
-  ``http://localhost:8080/server/oai/request``
+- ``DSPACE_SERVER_URL``: the DSpace backend, e.g. ``http://localhost:8080/server``;
+  the OAI-PMH endpoint is ``/oai/request`` under it, unless ``DSPACE_OAI_URL`` sets
+  another one
 - ``DSPACE_COLLECTION_HANDLE``: the collection, e.g. ``123456789/2``
 
 Nothing runs at import time; call :func:`read_items` or :func:`bulk_import`.
@@ -33,6 +34,7 @@ from datetime import datetime
 from server import oai_pmh
 from server.plugins.dspace.dspace_models import DSpaceItem, item_from_oai_record
 from server.plugins.dspace.plugin import DSpacePlugin
+from server.plugins.dspace.plugin import oai_url as configured_oai_url
 from server.plugins.ome_plugin import EducationResource
 
 METADATA_PREFIX = "dim"
@@ -51,13 +53,16 @@ def read_items(
     """
     Yield every item of the collection, or only those changed since *since*.
 
-    Deleted items are skipped. Missing arguments are read from DSPACE_OAI_URL
-    and DSPACE_COLLECTION_HANDLE.
+    Deleted items are skipped. Missing arguments are read from DSPACE_OAI_URL (or
+    DSPACE_SERVER_URL) and DSPACE_COLLECTION_HANDLE.
     """
-    oai_url = oai_url or os.getenv("DSPACE_OAI_URL")
+    oai_url = oai_url or configured_oai_url()
     collection_handle = collection_handle or os.getenv("DSPACE_COLLECTION_HANDLE")
     if not oai_url or not collection_handle:
-        msg = "Set DSPACE_OAI_URL and DSPACE_COLLECTION_HANDLE to read a collection"
+        msg = (
+            "Set DSPACE_SERVER_URL (or DSPACE_OAI_URL) and DSPACE_COLLECTION_HANDLE "
+            "to read a collection"
+        )
         raise RuntimeError(msg)
     for record in oai_pmh.list_records(
         oai_url,
@@ -81,7 +86,10 @@ def bulk_import(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
-    parser.add_argument("--oai-url", help="default: $DSPACE_OAI_URL")
+    parser.add_argument(
+        "--oai-url",
+        help="default: $DSPACE_OAI_URL, or /oai/request under $DSPACE_SERVER_URL",
+    )
     parser.add_argument(
         "--collection", help="handle, default: $DSPACE_COLLECTION_HANDLE"
     )

@@ -170,30 +170,49 @@ To publish items from this DSpace on your node, set the plugin in your local `co
 "cms_plugin": "server.plugins.dspace.plugin.DSpacePlugin"
 ```
 
-The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `config.json`:
+The plugin reads DSpace through OAI-PMH and saves through SWORD v2. Add a `dspace` block to
+the same `config.json`:
 
 ```json
 "dspace": {
-    "oai_url": "http://dspace:8080/server/oai/request",
+    "server_url": "http://dspace:8080/server",
+    "public_server_url": "http://localhost:8080/server",
     "handle_prefix": "123456789",
     "collection_handle": "123456789/2",
     "newsgroup": "ome.example",
     "site_name": "Example Library",
     "logo": "https://example.org/logo.png",
-    "librarian_contact": "librarian@example.org"
+    "librarian_contact": "librarian@example.org",
+    "deposit_email": "deposit@ome.test",
+    "deposit_password": "change-me"
 }
 ```
 
-`env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_HANDLE_PREFIX`, `DSPACE_COLLECTION_HANDLE`,
-`DSPACE_NEWSGROUP`, `DSPACE_SITE_NAME`, `DSPACE_LOGO` and `DSPACE_LIBRARIAN_CONTACT` for the
-backend. `newsgroup`, `site_name`, `logo` and `librarian_contact` are your library's own:
-the values above are placeholders. `handle_prefix` is your DSpace's handle prefix; it is
-optional and only needed to publish `hdl.handle.net` links.
-`newsgroup` is required on a node whose `cms_plugin` is the DSpace plugin: the Explore page
-takes the first newsgroup of the node's own plugin. The news server creates this group at
-start-up, so fill in the name only here. Do not add it to `local_newsgroups` as well: that
-list is for the channels of other libraries. `site_name`, `logo` and `librarian_contact` are
-optional; without them the defaults of `OMEPlugin` apply. Inside
-Docker the backend reaches DSpace at `dspace:8080`, not `localhost`. Use the handle that the
-bootstrap printed. The settings are read when they are needed, so a node without a `dspace`
-block still starts. See `server/plugins/dspace/README.md`.
+`env.j2` turns every key into a `DSPACE_*` variable for the backend (`server_url` becomes
+`DSPACE_SERVER_URL`, and so on). Every setting has a default, so a node without a `dspace`
+block still starts.
+
+- `server_url` is where the backend reaches DSpace. Inside Docker that is `dspace:8080`, not
+  `localhost`. The plugin reads OAI-PMH at `<server_url>/oai/request`; add `oai_url` only
+  when your OAI-PMH endpoint is somewhere else.
+- `collection_handle` is the collection that is read and saved into. Use the handle that the
+  bootstrap printed.
+- `newsgroup`, `site_name`, `logo` and `librarian_contact` are your library's own: the values
+  above are placeholders. `newsgroup` is required on a node whose `cms_plugin` is the DSpace
+  plugin: the Explore page takes the first newsgroup of the node's own plugin. The news
+  server creates this group at start-up, so fill in the name only here. Do not add it to
+  `local_newsgroups` as well: that list is for the channels of other libraries. Without
+  `site_name`, `logo` and `librarian_contact` the defaults of `OMEPlugin` apply.
+- `handle_prefix` is your DSpace's handle prefix. It is optional and only needed to publish
+  `hdl.handle.net` links.
+- `public_server_url`, `deposit_email` and `deposit_password` are only needed to save cards
+  from other libraries into this DSpace (`POST /api/channel/{name}/save`). The plugin
+  deposits them through SWORD v2 into the collection of `collection_handle`. Use the deposit
+  account that the bootstrap created (`DSPACE_DEPOSIT_EMAIL` and `DSPACE_DEPOSIT_PASSWORD`
+  in `.env`), never the admin.
+- `public_server_url` is DSpace's own `dspace.server.url`: `http://${DSPACE_HOST}:8080/server`
+  in `docker-compose.yml`. SWORD only knows the collection under that address, so the
+  plugin sends the deposit to `server_url` with the host of `public_server_url`. Leave it
+  out when `server_url` already is that address.
+
+See `server/plugins/dspace/README.md`.

@@ -10,6 +10,7 @@
 
 import os
 import re
+from dataclasses import replace
 from functools import cache
 from types import MappingProxyType
 from urllib.parse import urlparse
@@ -22,13 +23,17 @@ from server.plugins.dspace.dspace_models import (
     item_from_oai_record,
     parse_dspace_date,
 )
+from server.plugins.dspace.save import DepositSettings, save_to_dspace
 from server.plugins.oapen_books.oapen_models import OAPEN_LICENSE_TO_SPDX
 from server.plugins.ome_plugin import (
+    CMSUnreachableError,
     EducationResource,
     ItemNotFoundError,
     NotAnItemLinkError,
     OMEPlugin,
+    SavedItem,
 )
+from server.sword import UNREACHABLE_STATUSES
 
 # The three kinds of item links a librarian can paste:
 # a handle URL on the DSpace UI, e.g. http://localhost:4001/handle/123456789/3
@@ -57,6 +62,20 @@ def dspace_setting(name: str, default: str = "") -> str:
 NEWSGROUP = dspace_setting("NEWSGROUP")
 
 
+def oai_url() -> str:
+    """
+    The OAI-PMH endpoint: DSPACE_OAI_URL, or else ``/oai/request`` under
+    DSPACE_SERVER_URL (e.g. http://dspace:8080/server/oai/request), or "".
+
+    Both point at the same DSpace, so a library only needs to fill in server_url.
+    """
+    if url := dspace_setting("OAI_URL"):
+        return url
+    if url := dspace_setting("SERVER_URL"):
+        return f"{url.rstrip('/')}/oai/request"
+    return ""
+
+
 def _host_and_port(url: str) -> tuple[str, int | None]:
     """The host and port of a URL, with the default port filled in."""
     parts = urlparse(url)
@@ -83,9 +102,19 @@ def ui_url(dspace_server_url: str) -> str:
     The address of the DSpace website, e.g. http://localhost:4001.
 
     The REST API root names it in ``dspaceUI`` (no login needed). It is asked once
-    and kept, like the repositoryIdentifier.
+    and kept, like the repositoryIdentifier; a failed ask is not kept. Raise
+    CMSUnreachableError when DSpace does not answer or answers 502, 503 or 504, so
+    the routes answer 502 and the frontend can offer to try again.
     """
-    response = httpx2.get(f"{dspace_server_url}/api", timeout=30)
+    api = f"{dspace_server_url}/api"
+    try:
+        response = httpx2.get(api, timeout=30)
+    except httpx2.TransportError as error:
+        msg = f"DSpace at {api} did not answer: {error}"
+        raise CMSUnreachableError(msg) from error
+    if response.status_code in UNREACHABLE_STATUSES:
+        msg = f"DSpace at {api} answered {response.status_code}"
+        raise CMSUnreachableError(msg)
     if not (url := response.raise_for_status().json().get("dspaceUI")):
         msg = f"{dspace_server_url}/api does not name the DSpace website (dspaceUI)"
         raise RuntimeError(msg)
@@ -163,15 +192,17 @@ class DSpacePlugin(OMEPlugin):
         an item DSpace or OAI-PMH does not know raises ItemNotFoundError.
         """
         # Read the setting here, not at import time: a node without DSpace must start.
-        oai_url = os.getenv("DSPACE_OAI_URL")
-        if not oai_url:
-            msg = "DSPACE_OAI_URL is not set: this node has no DSpace configured"
+        if not (endpoint := oai_url()):
+            msg = (
+                "Neither DSPACE_SERVER_URL nor DSPACE_OAI_URL is set: "
+                "this node has no DSpace configured"
+            )
             raise RuntimeError(msg)
-        handle = self.handle_from_url(url, oai_url)
+        handle = self.handle_from_url(url, endpoint)
         # In OAI-PMH the repository decides the identifier, not the pasted link.
-        identifier = f"oai:{repository_identifier(oai_url)}:{handle}"
+        identifier = f"oai:{repository_identifier(endpoint)}:{handle}"
         try:
-            record = oai_pmh.get_record(oai_url, identifier, metadata_prefix="dim")
+            record = oai_pmh.get_record(endpoint, identifier, metadata_prefix="dim")
         except oai_pmh.OAIPMHError as error:
             if error.code == oai_pmh.ID_DOES_NOT_EXIST:
                 msg = (
@@ -227,6 +258,18 @@ class DSpacePlugin(OMEPlugin):
     def make_metadata_card_from_json(self, json_payload: str) -> EducationResource:
         """Create an EducationResource from a raw JSON string."""
         return self.make_metadata_card(DSpaceItem.model_validate_json(json_payload))
+
+    def save_resource(self, resource: EducationResource, ome_id: str) -> SavedItem:
+        """Deposit a card from the network as a new DSpace item, through SWORD v2.
+
+        Metadata only: the file stays behind the card's `source_url` (ADR 0011 §10).
+        The item page is `<website>/items/<uuid>`, with the website that DSpace names
+        as ``dspaceUI``, like the publish links. See `save_to_dspace()` in `save.py`
+        for the settings and the errors.
+        """
+        settings = DepositSettings.from_env()
+        settings = replace(settings, ui_url=ui_url(settings.server_url))
+        return save_to_dspace(resource, ome_id, settings)
 
 
 if __name__ == "__main__":

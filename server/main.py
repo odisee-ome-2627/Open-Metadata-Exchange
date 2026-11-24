@@ -135,6 +135,8 @@ async def create_post(meta: MiniMetadata) -> bool:
         raise HTTPException(404, detail=str(error)) from error
     except NotAnItemLinkError as error:
         raise HTTPException(400, detail=str(error)) from error
+    except CMSUnreachableError as error:
+        raise HTTPException(502, detail="The CMS is unreachable") from error
     # TODO(anooparyal): create a more generic version of the metadata and add that
     # to the list of attachments
     post = Post(

@@ -16,6 +16,7 @@ from server.plugins.dspace.dspace_models import (
 )
 from server.plugins.dspace.plugin import DSpacePlugin, dspace_setting
 from server.plugins.ome_plugin import (
+    CMSUnreachableError,
     EducationResource,
     ItemNotFoundError,
     NotAnItemLinkError,
@@ -274,6 +275,70 @@ def test_the_website_comes_from_the_rest_api(dspace: FakeDSpace) -> None:
     assert dspace.root_calls == 1
 
 
+def dspace_down(url: str, **_kwargs: object) -> httpx2.Response:
+    msg = "Name or service not known"
+    raise httpx2.ConnectError(msg, request=httpx2.Request("GET", url))
+
+
+def dspace_answers(status: int) -> Callable[..., httpx2.Response]:
+    def answer(url: str, **_kwargs: object) -> httpx2.Response:
+        return httpx2.Response(status, request=httpx2.Request("GET", url))
+
+    return answer
+
+
+@pytest.mark.usefixtures("dspace")
+@pytest.mark.parametrize(
+    "get",
+    [
+        pytest.param(dspace_down, id="no answer"),
+        *(pytest.param(dspace_answers(s), id=str(s)) for s in (502, 503, 504)),
+    ],
+)
+def test_a_dspace_that_does_not_answer_is_unreachable(
+    monkeypatch: pytest.MonkeyPatch, get: Callable[..., httpx2.Response]
+) -> None:
+    """The routes answer 502 for CMSUnreachableError, so the button says try again."""
+    monkeypatch.setattr(httpx2, "get", get)
+    with pytest.raises(CMSUnreachableError):
+        dspace_plugin.ui_url("http://dspace:8080/server")
+
+
+@pytest.mark.usefixtures("dspace")
+@pytest.mark.parametrize("status", [400, 404, 500])
+def test_another_error_status_is_not_unreachable(
+    monkeypatch: pytest.MonkeyPatch, status: int
+) -> None:
+    """DSpace did answer, so it is a real error, like in the search of save.py."""
+    monkeypatch.setattr(httpx2, "get", dspace_answers(status))
+    with pytest.raises(httpx2.HTTPStatusError):
+        dspace_plugin.ui_url("http://dspace:8080/server")
+
+
+def test_a_failed_ask_for_the_website_is_not_kept(
+    dspace: FakeDSpace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Once DSpace is back, the next ask works: @cache does not keep exceptions."""
+    # CI repeats a test with the same fixture (--iterations): start from an empty cache.
+    dspace_plugin.ui_url.cache_clear()
+    calls = dspace.root_calls
+    with monkeypatch.context() as down:
+        down.setattr(httpx2, "get", dspace_down)
+        with pytest.raises(CMSUnreachableError):
+            dspace_plugin.ui_url("http://dspace:8080/server")
+    assert dspace_plugin.ui_url("http://dspace:8080/server") == UI_URL
+    assert dspace.root_calls == calls + 1
+
+
+@pytest.mark.usefixtures("dspace")
+def test_publishing_with_dspace_down_is_unreachable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx2, "get", dspace_down)
+    with pytest.raises(CMSUnreachableError):
+        DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
+
+
 @pytest.mark.parametrize(
     "url",
     [
@@ -332,8 +397,41 @@ def test_card_from_url_needs_the_dspace_setting(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("DSPACE_OAI_URL", raising=False)
-    with pytest.raises(RuntimeError, match="DSPACE_OAI_URL"):
+    monkeypatch.delenv("DSPACE_SERVER_URL", raising=False)
+    with pytest.raises(RuntimeError, match="DSPACE_SERVER_URL"):
         DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
+
+
+@pytest.mark.parametrize(
+    ("oai", "server", "expected"),
+    [
+        # Only server_url: OAI-PMH is under it, so a library fills in one URL less.
+        ("", "http://dspace:8080/server/", "http://dspace:8080/server/oai/request"),
+        # An explicit oai_url still wins.
+        (
+            "http://oai.test/request",
+            "http://dspace:8080/server",
+            "http://oai.test/request",
+        ),
+        ("http://oai.test/request", "", "http://oai.test/request"),
+        ("", "", ""),
+    ],
+)
+def test_the_oai_url_comes_from_the_server_url_when_it_is_not_set(
+    monkeypatch: pytest.MonkeyPatch, oai: str, server: str, expected: str
+) -> None:
+    monkeypatch.setenv("DSPACE_OAI_URL", oai)
+    monkeypatch.setenv("DSPACE_SERVER_URL", server)
+    assert dspace_plugin.oai_url() == expected
+
+
+def test_publishing_works_with_only_the_server_url(
+    dspace: FakeDSpace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DSPACE_OAI_URL")
+    monkeypatch.setenv("DSPACE_SERVER_URL", "http://dspace:8080/server")
+    DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
+    assert dspace.identifiers == ["oai:dspace.odisee.test:123456789/3"]
 
 
 def test_dspace_setting_reads_the_variable(monkeypatch: pytest.MonkeyPatch) -> None:
