@@ -70,7 +70,7 @@ describe('SaveToLibraryButton', () => {
   });
 
   test('saved without a `cms_url` in the answer: no link', async () => {
-    mockedAxios.post.mockResolvedValue({ data: { status: 'saved', cms_id: '148252' } });
+    mockedAxios.post.mockResolvedValue({ data: { status: 'saved', cms_id: responses.saved.body.cms_id } });
     renderButton();
 
     save();
