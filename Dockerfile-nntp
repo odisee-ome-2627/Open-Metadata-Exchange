@@ -1,6 +1,10 @@
 FROM debian:stable
 
-RUN apt-get update && apt-get install --yes --no-install-recommends inn2 j2cli netcat-traditional openssl tini
+RUN apt-get update && apt-get install --yes --no-install-recommends \
+	busybox-syslogd inn2 j2cli netcat-traditional openssl tini
+
+# INN logs through syslog: send every message to the output of the container (docker logs).
+COPY ./server_config/news_server/etc/syslog.conf /etc/syslog.conf
 
 COPY ./server_config/news_server/docker-entrypoint.sh /docker-entrypoint.sh
 
