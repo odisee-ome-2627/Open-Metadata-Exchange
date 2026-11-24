@@ -161,3 +161,39 @@ seed. Every item stores the link to its page, and other nodes open it, so items 
 
 New items only show up in OAI-PMH after
 `docker compose --profile dev exec dspace /dspace/bin/dspace oai import`.
+
+### The DSpace plugin
+
+To publish items from this DSpace on your node, set the plugin in your local `config.json`:
+
+```json
+"cms_plugin": "server.plugins.dspace.plugin.DSpacePlugin"
+```
+
+The plugin reads DSpace through OAI-PMH. Add a `dspace` block to the same `config.json`:
+
+```json
+"dspace": {
+    "oai_url": "http://dspace:8080/server/oai/request",
+    "handle_prefix": "123456789",
+    "collection_handle": "123456789/2",
+    "newsgroup": "ome.example",
+    "site_name": "Example Library",
+    "logo": "https://example.org/logo.png",
+    "librarian_contact": "librarian@example.org"
+}
+```
+
+`env.j2` turns it into `DSPACE_OAI_URL`, `DSPACE_HANDLE_PREFIX`, `DSPACE_COLLECTION_HANDLE`,
+`DSPACE_NEWSGROUP`, `DSPACE_SITE_NAME`, `DSPACE_LOGO` and `DSPACE_LIBRARIAN_CONTACT` for the
+backend. `newsgroup`, `site_name`, `logo` and `librarian_contact` are your library's own:
+the values above are placeholders. `handle_prefix` is your DSpace's handle prefix; it is
+optional and only needed to publish `hdl.handle.net` links.
+`newsgroup` is required on a node whose `cms_plugin` is the DSpace plugin: the Explore page
+takes the first newsgroup of the node's own plugin. The news server creates this group at
+start-up, so fill in the name only here. Do not add it to `local_newsgroups` as well: that
+list is for the channels of other libraries. `site_name`, `logo` and `librarian_contact` are
+optional; without them the defaults of `OMEPlugin` apply. Inside
+Docker the backend reaches DSpace at `dspace:8080`, not `localhost`. Use the handle that the
+bootstrap printed. The settings are read when they are needed, so a node without a `dspace`
+block still starts. See `server/plugins/dspace/README.md`.
