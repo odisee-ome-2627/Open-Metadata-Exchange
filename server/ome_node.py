@@ -15,6 +15,7 @@
 # import json
 import os
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from email import message_from_string
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -125,10 +126,9 @@ def from_post(post: NewsgroupPost) -> Post:
                     )
     else:
         body = message.get_payload(decode=True)
+    # An article without a readable Date header gets the date of this server
     ds = headers.get("Date")
-    date = dateparser.parse(ds)
-    if not date:
-        date = dateparser.parse("Wed, 1 Jan 2024 03:15:57 -0500")
+    date = (dateparser.parse(ds) if ds else None) or datetime.now(tz=UTC)
 
     return Post(
         id=post.id,
