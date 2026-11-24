@@ -10,6 +10,7 @@
 
 import os
 import re
+from dataclasses import replace
 from functools import cache
 from types import MappingProxyType
 from urllib.parse import urlparse
@@ -22,7 +23,7 @@ from server.plugins.dspace.dspace_models import (
     item_from_oai_record,
     parse_dspace_date,
 )
-from server.plugins.dspace.save import save_to_dspace
+from server.plugins.dspace.save import DepositSettings, save_to_dspace
 from server.plugins.oapen_books.oapen_models import OAPEN_LICENSE_TO_SPDX
 from server.plugins.ome_plugin import (
     EducationResource,
@@ -57,6 +58,20 @@ def dspace_setting(name: str, default: str = "") -> str:
 
 
 NEWSGROUP = dspace_setting("NEWSGROUP")
+
+
+def oai_url() -> str:
+    """
+    The OAI-PMH endpoint: DSPACE_OAI_URL, or else ``/oai/request`` under
+    DSPACE_SERVER_URL (e.g. http://dspace:8080/server/oai/request), or "".
+
+    Both point at the same DSpace, so a library only needs to fill in server_url.
+    """
+    if url := dspace_setting("OAI_URL"):
+        return url
+    if url := dspace_setting("SERVER_URL"):
+        return f"{url.rstrip('/')}/oai/request"
+    return ""
 
 
 def _host_and_port(url: str) -> tuple[str, int | None]:
@@ -165,15 +180,17 @@ class DSpacePlugin(OMEPlugin):
         an item DSpace or OAI-PMH does not know raises ItemNotFoundError.
         """
         # Read the setting here, not at import time: a node without DSpace must start.
-        oai_url = os.getenv("DSPACE_OAI_URL")
-        if not oai_url:
-            msg = "DSPACE_OAI_URL is not set: this node has no DSpace configured"
+        if not (endpoint := oai_url()):
+            msg = (
+                "Neither DSPACE_SERVER_URL nor DSPACE_OAI_URL is set: "
+                "this node has no DSpace configured"
+            )
             raise RuntimeError(msg)
-        handle = self.handle_from_url(url, oai_url)
+        handle = self.handle_from_url(url, endpoint)
         # In OAI-PMH the repository decides the identifier, not the pasted link.
-        identifier = f"oai:{repository_identifier(oai_url)}:{handle}"
+        identifier = f"oai:{repository_identifier(endpoint)}:{handle}"
         try:
-            record = oai_pmh.get_record(oai_url, identifier, metadata_prefix="dim")
+            record = oai_pmh.get_record(endpoint, identifier, metadata_prefix="dim")
         except oai_pmh.OAIPMHError as error:
             if error.code == oai_pmh.ID_DOES_NOT_EXIST:
                 msg = (
@@ -234,9 +251,13 @@ class DSpacePlugin(OMEPlugin):
         """Deposit a card from the network as a new DSpace item, through SWORD v2.
 
         Metadata only: the file stays behind the card's `source_url` (ADR 0011 §10).
-        See `save_to_dspace()` in `save.py` for the settings and the errors.
+        The item page is `<website>/items/<uuid>`, with the website that DSpace names
+        as ``dspaceUI``, like the publish links. See `save_to_dspace()` in `save.py`
+        for the settings and the errors.
         """
-        return save_to_dspace(resource, ome_id)
+        settings = DepositSettings.from_env()
+        settings = replace(settings, ui_url=ui_url(settings.server_url))
+        return save_to_dspace(resource, ome_id, settings)
 
 
 if __name__ == "__main__":

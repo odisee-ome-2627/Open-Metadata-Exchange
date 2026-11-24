@@ -332,8 +332,41 @@ def test_card_from_url_needs_the_dspace_setting(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("DSPACE_OAI_URL", raising=False)
-    with pytest.raises(RuntimeError, match="DSPACE_OAI_URL"):
+    monkeypatch.delenv("DSPACE_SERVER_URL", raising=False)
+    with pytest.raises(RuntimeError, match="DSPACE_SERVER_URL"):
         DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
+
+
+@pytest.mark.parametrize(
+    ("oai", "server", "expected"),
+    [
+        # Only server_url: OAI-PMH is under it, so a library fills in one URL less.
+        ("", "http://dspace:8080/server/", "http://dspace:8080/server/oai/request"),
+        # An explicit oai_url still wins.
+        (
+            "http://oai.test/request",
+            "http://dspace:8080/server",
+            "http://oai.test/request",
+        ),
+        ("http://oai.test/request", "", "http://oai.test/request"),
+        ("", "", ""),
+    ],
+)
+def test_the_oai_url_comes_from_the_server_url_when_it_is_not_set(
+    monkeypatch: pytest.MonkeyPatch, oai: str, server: str, expected: str
+) -> None:
+    monkeypatch.setenv("DSPACE_OAI_URL", oai)
+    monkeypatch.setenv("DSPACE_SERVER_URL", server)
+    assert dspace_plugin.oai_url() == expected
+
+
+def test_publishing_works_with_only_the_server_url(
+    dspace: FakeDSpace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DSPACE_OAI_URL")
+    monkeypatch.setenv("DSPACE_SERVER_URL", "http://dspace:8080/server")
+    DSpacePlugin().make_metadata_card_from_url(f"{UI_URL}/handle/123456789/3")
+    assert dspace.identifiers == ["oai:dspace.odisee.test:123456789/3"]
 
 
 def test_dspace_setting_reads_the_variable(monkeypatch: pytest.MonkeyPatch) -> None:

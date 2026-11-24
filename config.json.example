@@ -22,14 +22,14 @@
     "cms_plugin": "server.plugins.qubes.plugin.QubesPlugin",
 
     "dspace": {
-	"oai_url": "http://dspace:8080/server/oai/request",
+	"server_url": "http://dspace:8080/server",
+	"public_server_url": "http://localhost:8080/server",
 	"handle_prefix": "123456789",
 	"collection_handle": "123456789/2",
 	"newsgroup": "ome.example",
 	"site_name": "Example Library",
 	"logo": "https://example.org/logo.png",
 	"librarian_contact": "librarian@example.org",
-	"server_url": "http://dspace:8080/server",
 	"deposit_email": "deposit@ome.test",
 	"deposit_password": "change-me"
     }

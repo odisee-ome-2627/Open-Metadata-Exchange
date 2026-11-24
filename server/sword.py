@@ -44,6 +44,18 @@ class SWORDUnreachableError(CMSUnreachableError):
 
 
 @dataclass(frozen=True)
+class SWORDCollection:
+    """Where and as whom to deposit."""
+
+    url: str  # the collection IRI
+    auth: tuple[str, str]  # (username, password) for basic auth
+    # A Host header to send instead of the one of `url`: for a repository that is
+    # reached on an internal address but only knows its collections under its
+    # public name. "" keeps the one of `url`.
+    host: str = ""
+
+
+@dataclass(frozen=True)
 class DepositReceipt:
     """What the deposit receipt says about the new item."""
 
@@ -98,9 +110,8 @@ def parse_receipt(content: bytes, location: str = "") -> DepositReceipt:
 
 
 def deposit_entry(
-    collection_url: str,
+    collection: SWORDCollection,
     entry: bytes,
-    auth: tuple[str, str],
     *,
     in_progress: bool = False,
     transport: httpx2.BaseTransport | None = None,
@@ -116,15 +127,19 @@ def deposit_entry(
         "Content-Type": ENTRY_CONTENT_TYPE,
         "In-Progress": "true" if in_progress else "false",
     }
+    if collection.host:
+        headers["Host"] = collection.host
     try:
-        with httpx2.Client(auth=auth, transport=transport, timeout=30) as client:
-            response = client.post(collection_url, content=entry, headers=headers)
+        with httpx2.Client(
+            auth=collection.auth, transport=transport, timeout=30
+        ) as client:
+            response = client.post(collection.url, content=entry, headers=headers)
     except httpx2.TransportError as error:
-        msg = f"SWORD collection {collection_url} did not answer: {error}"
+        msg = f"SWORD collection {collection.url} did not answer: {error}"
         raise SWORDUnreachableError(msg) from error
 
     if response.status_code in UNREACHABLE_STATUSES:
-        msg = f"SWORD collection {collection_url} answered {response.status_code}"
+        msg = f"SWORD collection {collection.url} answered {response.status_code}"
         raise SWORDUnreachableError(msg)
     if response.status_code in {401, 403}:
         raise SWORDLoginError(response.status_code, _error_message(response))

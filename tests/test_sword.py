@@ -10,6 +10,7 @@ from server.plugins.ome_plugin import CMSUnreachableError
 
 COLLECTION_URL = "http://repository.test/swordv2/collection/1/2"
 AUTH = ("deposit@ome.test", "secret")
+COLLECTION = sword.SWORDCollection(COLLECTION_URL, AUTH)
 RECEIPT = b"""<?xml version="1.0"?>
 <entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/">
   <id>http://repository.test/handle/1/9</id>
@@ -54,9 +55,7 @@ def test_a_deposit_posts_the_entry_with_basic_auth_and_in_progress_false() -> No
         return httpx2.Response(201, content=RECEIPT)
 
     entry = sword.atom_entry([("title", "T")])
-    sword.deposit_entry(
-        COLLECTION_URL, entry, AUTH, transport=httpx2.MockTransport(record)
-    )
+    sword.deposit_entry(COLLECTION, entry, transport=httpx2.MockTransport(record))
     [request] = requests
     assert (request.method, str(request.url)) == ("POST", COLLECTION_URL)
     assert request.headers["In-Progress"] == "false"
@@ -65,9 +64,43 @@ def test_a_deposit_posts_the_entry_with_basic_auth_and_in_progress_false() -> No
     assert request.content == entry
 
 
+def test_a_deposit_can_carry_another_host_header() -> None:
+    requests: list[httpx2.Request] = []
+
+    def record(request: httpx2.Request) -> httpx2.Response:
+        requests.append(request)
+        return httpx2.Response(201, content=RECEIPT)
+
+    sword.deposit_entry(
+        sword.SWORDCollection(COLLECTION_URL, AUTH, host="public.repo.test:8080"),
+        sword.atom_entry([("title", "T")]),
+        transport=httpx2.MockTransport(record),
+    )
+    [request] = requests
+    assert str(request.url) == COLLECTION_URL
+    assert request.headers["Host"] == "public.repo.test:8080"
+
+
+def test_a_deposit_can_be_left_in_progress() -> None:
+    requests: list[httpx2.Request] = []
+
+    def record(request: httpx2.Request) -> httpx2.Response:
+        requests.append(request)
+        return httpx2.Response(201, content=RECEIPT)
+
+    sword.deposit_entry(
+        COLLECTION,
+        b"<entry/>",
+        in_progress=True,
+        transport=httpx2.MockTransport(record),
+    )
+    [request] = requests
+    assert request.headers["In-Progress"] == "true"
+
+
 def test_the_receipt_gives_the_edit_iri_page_and_identifiers() -> None:
     receipt = sword.deposit_entry(
-        COLLECTION_URL, b"<entry/>", AUTH, transport=answer(201, RECEIPT)
+        COLLECTION, b"<entry/>", transport=answer(201, RECEIPT)
     )
     assert receipt.edit_iri == "http://repository.test/swordv2/edit/abc"
     assert receipt.alternate_url == "http://repository.test/handle/1/9"
@@ -84,14 +117,12 @@ def test_without_an_edit_link_the_location_header_is_the_edit_iri() -> None:
 @pytest.mark.parametrize("status", [401, 403])
 def test_a_refused_login_raises_a_login_error(status: int) -> None:
     with pytest.raises(sword.SWORDLoginError):
-        sword.deposit_entry(COLLECTION_URL, b"", AUTH, transport=answer(status))
+        sword.deposit_entry(COLLECTION, b"", transport=answer(status))
 
 
 def test_another_refusal_carries_the_summary_of_the_error_document() -> None:
     with pytest.raises(sword.SWORDError, match="does not take this") as error:
-        sword.deposit_entry(
-            COLLECTION_URL, b"", AUTH, transport=answer(415, ERROR_DOCUMENT)
-        )
+        sword.deposit_entry(COLLECTION, b"", transport=answer(415, ERROR_DOCUMENT))
     assert error.value.status == 415
 
 
@@ -101,15 +132,13 @@ def test_a_repository_that_does_not_answer_is_unreachable() -> None:
         raise httpx2.ConnectError(msg, request=request)
 
     with pytest.raises(CMSUnreachableError):
-        sword.deposit_entry(
-            COLLECTION_URL, b"", AUTH, transport=httpx2.MockTransport(refuse)
-        )
+        sword.deposit_entry(COLLECTION, b"", transport=httpx2.MockTransport(refuse))
 
 
 @pytest.mark.parametrize("status", [502, 503, 504])
 def test_a_gateway_error_is_unreachable(status: int) -> None:
     with pytest.raises(sword.SWORDUnreachableError):
-        sword.deposit_entry(COLLECTION_URL, b"", AUTH, transport=answer(status))
+        sword.deposit_entry(COLLECTION, b"", transport=answer(status))
 
 
 def test_the_writer_has_no_dspace_names() -> None:
