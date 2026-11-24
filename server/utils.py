@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from server.get_ome_plugins import get_ome_plugins
 from server.ome_node import channel_summary, get_last_n_posts
+from server.ome_node import channels as channels_on_inn
 from server.ome_node import plugin as site_plugin
 from server.plugins.ome_plugin import EducationResource, OMEPlugin
 from server.schemas import (
@@ -48,8 +49,22 @@ def get_channels() -> Iterable[tuple[str, str, OMEPlugin]]:
             yield slug, description, plugin
 
 
-def get_channels_filters() -> Iterable[FilterItem]:
+def get_channels_on_this_node() -> Iterable[tuple[str, str, OMEPlugin]]:
+    """The channels of the plugins that exist as a group on INN.
+
+    A group that is missing on this node is skipped, so one missing group does not
+    break Explore and Browse for all the others.
+    """
+    on_inn = {channel.name for channel in channels_on_inn()}
     for slug, description, plugin in get_channels():
+        if slug in on_inn:
+            yield slug, description, plugin
+        else:
+            print(f"Skipping {slug}: no such group on this node", flush=True)
+
+
+def get_channels_filters() -> Iterable[FilterItem]:
+    for slug, description, plugin in get_channels_on_this_node():
         yield FilterItem(
             name=description,
             slug=slug,
@@ -62,7 +77,7 @@ def get_channels_filters() -> Iterable[FilterItem]:
 
 def get_latest_articles(num: int) -> list[Post]:
     articles = []
-    for slug, _description, _plugin in get_channels():
+    for slug, _description, _plugin in get_channels_on_this_node():
         posts = get_last_n_posts(slug, num)
         articles.extend(posts)
     return sorted(articles, key=attrgetter("date"), reverse=True)[-num:]
@@ -70,7 +85,7 @@ def get_latest_articles(num: int) -> list[Post]:
 
 def get_active_channels(num: int = -1) -> list[ChannelSummaryData]:
     channels = []
-    for slug, description, plugin in get_channels():
+    for slug, description, plugin in get_channels_on_this_node():
         summary = channel_summary(slug)
         posts = list(get_last_n_posts(slug, 1))
         latest_post = posts[0] if posts else None
