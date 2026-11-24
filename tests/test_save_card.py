@@ -1,8 +1,9 @@
 """The real save route: fetch the card, call the plugin, map the errors.
 
 The plugins here are fakes of a few lines. They only do what the contract of #227
-promises: return a `SavedItem` or raise `CMSUnreachableError`. The DSpace plugin
-(#223) is checked against the same route once it exists.
+promises: return a `SavedItem`, or raise `CardAlreadySavedError` or
+`CMSUnreachableError`. The DSpace plugin has its own tests in
+`test_dspace_save.py`. One test here runs it against the route while DSpace is down.
 """
 
 from collections.abc import Iterator
@@ -20,6 +21,7 @@ from server.main import app, current_plugin
 from server.plugins.dspace import plugin as dspace_plugin
 from server.plugins.dspace.plugin import DSpacePlugin
 from server.plugins.ome_plugin import (
+    CardAlreadySavedError,
     CMSUnreachableError,
     EducationResource,
     OMEPlugin,
@@ -70,6 +72,23 @@ class SavingPlugin(OMEPlugin):
         )
 
 
+EXISTING = SavedItem(
+    cms_id="6bb452d9-d7e5-4f34-a534-630dbb6d4d31",
+    cms_url="https://repo.example.org/items/6bb452d9-d7e5-4f34-a534-630dbb6d4d31",
+)
+
+
+class AlreadySavedPlugin(OMEPlugin):
+    """The CMS already has every card, so nothing new is saved."""
+
+    calls: ClassVar[list[str]] = []
+
+    @override
+    def save_resource(self, resource: EducationResource, ome_id: str) -> SavedItem:
+        self.calls.append(ome_id)
+        raise CardAlreadySavedError(EXISTING)
+
+
 class UnreachablePlugin(OMEPlugin):
     @override
     def save_resource(self, resource: EducationResource, ome_id: str) -> SavedItem:
@@ -91,6 +110,12 @@ def card_on_the_node(monkeypatch: pytest.MonkeyPatch) -> None:
 def saving_plugin() -> Iterator[None]:
     SavingPlugin.calls.clear()
     yield from use(SavingPlugin)
+
+
+@pytest.fixture
+def already_saved_plugin() -> Iterator[None]:
+    AlreadySavedPlugin.calls.clear()
+    yield from use(AlreadySavedPlugin)
 
 
 @pytest.fixture
@@ -116,6 +141,17 @@ def test_the_plugin_gets_the_card_and_its_message_id() -> None:
     client.post(SAVE_URL, json={"id": 7})
     # pytest-run-parallel repeats the test without its fixtures: check the last call
     assert SavingPlugin.calls[-1] == (CARD.title, MESSAGE_ID)
+
+
+@pytest.mark.usefixtures("card_on_the_node", "already_saved_plugin")
+@pytest.mark.thread_unsafe(reason="replaces ome_node.get_post and the plugin")
+def test_a_card_the_cms_already_has_gives_409_with_the_existing_item() -> None:
+    """The button shows "In my library" and links to `cms_url` (#325)."""
+    response = client.post(SAVE_URL, json={"id": 7})
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {"detail": EXISTING.model_dump()}
+    # The plugin was asked once and saved nothing new
+    assert AlreadySavedPlugin.calls[-1] == MESSAGE_ID
 
 
 @pytest.mark.usefixtures("card_on_the_node", "unreachable_plugin")
