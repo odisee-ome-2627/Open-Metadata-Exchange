@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from server import db, ome_node
 from server.helpers import MocAPI
 from server.plugins.ome_plugin import (
+    CardAlreadySavedError,
     CMSUnreachableError,
     ItemNotFoundError,
     NotAnItemLinkError,
@@ -170,9 +171,9 @@ def current_plugin() -> OMEPlugin:
     return ome_node.plugin
 
 
-SAVED = {
-    "cms_id": "123456789/42",
-    "cms_url": "https://repo.example.org/handle/123456789/42",
+EXAMPLE_SAVED_ITEM = {
+    "cms_id": "6bb452d9-d7e5-4f34-a534-630dbb6d4d31",
+    "cms_url": "https://repo.example.org/items/6bb452d9-d7e5-4f34-a534-630dbb6d4d31",
 }
 SAVE_RESPONSES = {
     404: {
@@ -186,8 +187,8 @@ SAVE_RESPONSES = {
     },
     409: {
         "model": AlreadySavedResponse,
-        "description": "Already saved, links to the existing item (from #228)",
-        "content": {"application/json": {"example": {"detail": SAVED}}},
+        "description": "The CMS already has this card, links to the existing item",
+        "content": {"application/json": {"example": {"detail": EXAMPLE_SAVED_ITEM}}},
     },
     422: {
         "description": (
@@ -227,7 +228,9 @@ async def save_card(
 
     The NNTP client and the plugin are synchronous, so both run in a thread:
     saving may take seconds, and the event loop keeps serving other requests.
-    No mapping yet: a second save makes a second item, the 409 comes with #228.
+    When the CMS already has the card, the plugin raises CardAlreadySavedError and
+    the route answers 409 with the existing item. #228 adds a check in the node's
+    own mapping table before the plugin is called.
     """
     if not can_save(plugin):
         raise HTTPException(501, detail="This plugin cannot save cards")
@@ -245,6 +248,8 @@ async def save_card(
         ) from error
     try:
         saved = await asyncio.to_thread(plugin.save_resource, card, post.message_id)
+    except CardAlreadySavedError as error:
+        raise HTTPException(409, detail=error.existing.model_dump()) from error
     except CMSUnreachableError as error:
         raise HTTPException(502, detail="The CMS is unreachable") from error
     return SaveResponse(**saved.model_dump())

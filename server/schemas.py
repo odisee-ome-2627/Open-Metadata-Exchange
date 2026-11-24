@@ -121,8 +121,8 @@ class SaveResponse(SavedItem):
             "examples": [
                 {
                     "status": "saved",
-                    "cms_id": "123456789/42",
-                    "cms_url": "https://repo.example.org/handle/123456789/42",
+                    "cms_id": "6bb452d9-d7e5-4f34-a534-630dbb6d4d31",
+                    "cms_url": "https://repo.example.org/items/6bb452d9-d7e5-4f34-a534-630dbb6d4d31",
                 }
             ]
         }
@@ -136,7 +136,7 @@ class ErrorResponse(BaseModel):
 
 
 class AlreadySavedResponse(BaseModel):
-    """409: the card is already in the CMS. Only returned once #228 exists."""
+    """409 of `POST /api/channel/{name}/save`: the CMS already has the card."""
 
     detail: SavedItem
 
