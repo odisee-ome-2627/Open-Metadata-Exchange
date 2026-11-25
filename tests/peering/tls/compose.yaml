@@ -108,7 +108,6 @@ services:
     network_mode: "service:tls-a"
     cap_add:
       - NET_RAW
-      - NET_ADMIN
     depends_on:
       - tls-a
 
