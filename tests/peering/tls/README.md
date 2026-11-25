@@ -60,8 +60,10 @@ these tests also work on Windows without changes to `tests/peering/nodes.py`.
   peer per node this works; with several peers all of them share one `incoming.conf` identity. The
   TLS layer does know who connected (the pinned certificate); a design for several peers needs
   one server service per peer, with its own source address.
-- **Plain entry on the sidecar.** `tls-a:11901` accepts plain NNTP from everything in the same
-  Docker network, and sends it on as `node-a`. In a real setup this port must only be reachable by
+- **Plain entry on the sidecar.** `tls-a:11901` accepts plain NNTP from everything in the same Docker
+  network, without any certificate, and sends it on over TLS as `node-a`. The peer then trusts whoever
+  sent it as `node-a` (shown in review: an `IHAVE` from the `intruder` container was accepted). This is
+  a hole, not just a limit. In a real setup this port must only be reachable by
   the INN container (own internal network).
 - **Certificates** are generated per test run and thrown away. Exchange, renewal and revocation in
   production are not solved here.
