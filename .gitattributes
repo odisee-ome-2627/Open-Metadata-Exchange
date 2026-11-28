@@ -7,3 +7,4 @@
 *.py             text eol=lf
 Dockerfile*      text eol=lf
 server_config/** text eol=lf
+tests/peering/tls/** text eol=lf
