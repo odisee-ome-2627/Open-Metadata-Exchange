@@ -5,6 +5,12 @@
 # 	openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout etc/key.pem -out etc/cert.pem -subj "/CN=news.localhost"
 # fi
 
+# innd, innfeed and nnrpd log through syslog. Start a small syslog daemon first, so that every
+# message, also the reason why innd refuses to start, reaches the output of the container.
+# /etc/syslog.conf sends everything to stdout, so `docker logs` shows it.
+busybox syslogd -n -S &
+syslogd_pid=$!
+
 # INN keeps its data in two volumes (see docker-compose.yml). A host folder used as a volume starts
 # empty, so add the starting files of the image that are missing. Existing data is never replaced.
 cp -a --update=none /usr/local/share/ome/news-db/. /var/lib/news/
@@ -96,4 +102,8 @@ if [ -f "${PATHRUN}/nnrpd-563.pid" ]; then
 	kill "$(cat "${PATHRUN}/nnrpd-563.pid")" 2>/dev/null
 	rm -f "${PATHRUN}/nnrpd-563.pid"
 fi
+# Stop syslogd last, so the messages of the shutdown are in the logs too. A short pause lets it
+# write what is still in its socket.
+sleep 0.5
+kill "${syslogd_pid}" 2>/dev/null
 exit "${rc}"  # The exit code of innd becomes the exit code of the container

@@ -153,8 +153,8 @@ class PeeringNodes:
     def diagnostics(self, *nodes: str) -> str:
         """The innfeed log of the given nodes, to show why an article did not arrive.
 
-        innd itself logs to syslog, which the image does not run, so news.notice
-        stays empty. innfeed writes its own log: drop its "queue:" debug noise.
+        innd's own messages go to `docker compose logs` (syslog to stdout). innfeed
+        also writes its own log, with more detail: drop its "queue:" debug noise.
         """
         parts = [self.compose("ps", "--all", check=False).stdout]
         for node in nodes:
